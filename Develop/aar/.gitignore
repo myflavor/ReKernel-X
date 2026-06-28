@@ -1,0 +1,12 @@
+# Gradle
+.gradle/
+build/
+local.properties
+
+# CMake / NDK
+*.cxx/
+.cxx/
+
+# IDE
+.idea/
+*.iml

@@ -1,0 +1,61 @@
+/*
+ * Copyright (c) Sakion Team. All rights reserved.
+ *
+ * File name: signal.c
+ * Description: rekernel signal trace hook — fatal signals sent to frozen tasks.
+ * Author: nep_timeline@outlook.com
+ */
+#include <linux/printk.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/sched.h>
+#include <linux/sched/signal.h>
+#include <trace/hooks/signal.h>
+#include "rekernel.h"
+
+void line_signal(void *data, int sig, struct task_struct *killer, struct task_struct *dst)
+{
+	if (!dst || !killer)
+		return;
+
+	if (line_is_frozen(dst) &&
+			(sig == SIGKILL
+			|| sig == SIGTERM
+			|| sig == SIGABRT
+			|| sig == SIGQUIT)) {
+#ifdef DEBUG
+		pr_info("[Re-Kernel LKM] Process Signal! signal=%d\n", sig);
+#endif
+		if (rekernel_netlink_ready()) {
+			struct rekernel_event event = {
+				.type = REKERNEL_EVT_SIGNAL,
+				.u.signal = {
+					.signal = sig,
+					.killer_pid = task_tgid_nr(killer),
+					.killer_uid = task_uid(killer).val,
+					.dst_pid = task_tgid_nr(dst),
+					.dst_uid = task_uid(dst).val,
+				},
+			};
+			sendMessage(&event);
+		}
+	}
+}
+
+int register_signal(void)
+{
+	int rc = LINE_SUCCESS;
+
+	rc = register_trace_android_vh_do_send_sig_info(line_signal, NULL);
+	if (rc != LINE_SUCCESS) {
+		pr_err("register_trace_android_vh_do_send_sig_info failed, rc=%d\n", rc);
+		return rc;
+	}
+
+	return LINE_SUCCESS;
+}
+
+void unregister_signal(void)
+{
+	unregister_trace_android_vh_do_send_sig_info(line_signal, NULL);
+}

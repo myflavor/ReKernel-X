@@ -32,9 +32,6 @@ Find your device kernel from the [list of supported devices](https://github.com/
 ## Connecting the tombstone to Re:Kernel
 Re:Kernel has opened a Netlink server that allows all tombstone developers to integrate it into their own tombstones. For details, please go to the [Develop](https://github.com/Sakion-Team/Re-Kernel/tree/main/Develop) folder in the repository to view.
 
-## Integrate Re:Kernel for non GKI or QGKI kernels
-For users with kernel versions less than or equal to 5.4, we provide a method for users to insert Re:Kernel code into their device's kernel to support Re:Kernel (Check [Integrate](https://github.com/Sakion-Team/Re-Kernel/blob/main/Integrate/README.md)). However, you should be able to build a bootable kernel from your kernel source code. If the kernel is not open source, this is almost impossible.
-
 ## Q / A
 Q: Will this module leak Root?
 
