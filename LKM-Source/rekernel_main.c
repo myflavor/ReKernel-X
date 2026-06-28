@@ -17,7 +17,7 @@ static int __init start_rekernel(void)
 #ifdef DEBUG
 	pr_info("Debug mode is enabled!\n");
 #endif
-	pr_info("Re:Kernel v9.5 | DEVELOPER: Sakion Team | GENL FAMILY: %s\n", REKERNEL_GENL_FAMILY_NAME);
+	pr_info("Re:Kernel %s | DEVELOPER: Sakion Team | GENL FAMILY: %s\n", REKERNEL_VERSION, REKERNEL_GENL_FAMILY_NAME);
 
 	if (register_genl() != LINE_SUCCESS) {
 		pr_err("%s: Failed to register genl family!\n", __func__);

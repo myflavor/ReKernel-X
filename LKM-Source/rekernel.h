@@ -6,6 +6,10 @@
 
 struct task_struct;
 
+#ifndef REKERNEL_VERSION
+#define REKERNEL_VERSION "snapshot"
+#endif
+
 #define CLEAN_UP_ASYNC_BINDER
 
 #define MIN_USERAPP_UID                 (10000)
