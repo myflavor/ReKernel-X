@@ -17,7 +17,7 @@ Your device must be rooted with Magisk (v20.4+). Kernel version >= 5.10 is requi
 Flash the Re:Kernel Magisk module via Magisk. It will automatically load after each boot.
 
 ### Method 2: Manual Mount
-Extract `rekernel.ko` from the Magisk module, place it in `/data/`, then run:
+Extract `rekernel.ko` from the Magisk module, place it in `/data/local/tmp/`, then run:
 ```sh
 insmod rekernel.ko
 ```
