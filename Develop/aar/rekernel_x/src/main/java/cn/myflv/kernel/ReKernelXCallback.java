@@ -24,23 +24,30 @@ public interface ReKernelXCallback {
     /**
      * @param binderType {@link #BINDER_TRANSACTION}, {@link #BINDER_REPLY},
      *                   or {@link #BINDER_FREE_BUFFER_FULL}
+     * @param oneway     1 if async, 0 if sync
+     * @param fromUid    uid of the sender
+     * @param fromPid    pid of the sender
+     * @param targetUid  uid of the target (frozen process)
+     * @param targetPid  pid of the target (frozen process)
+     * @param rpcName    interface token name
+     * @param code       transaction code
      */
-    void binder(int binderType, int oneway, int from, int fromPid, int target, int targetPid, String rpcName, int code);
+    void binder(int binderType, int oneway, int fromUid, int fromPid, int targetUid, int targetPid, String rpcName, int code);
 
     /**
-     * @param signal   signal number sent
-     * @param killer   uid of the process sending the signal
-     * @param killerPid pid of the process sending the signal
-     * @param dst      uid of the target process
-     * @param dstPid   pid of the target process
+     * @param signal     signal number sent
+     * @param killerUid  uid of the process sending the signal
+     * @param killerPid  pid of the process sending the signal
+     * @param dstUid     uid of the target process
+     * @param dstPid     pid of the target process
      */
-    void signal(int signal, int killer, int killerPid, int dst, int dstPid);
+    void signal(int signal, int killerUid, int killerPid, int dstUid, int dstPid);
 
     /**
-     * @param proto   {@link #PROTO_IPV4} or {@link #PROTO_IPV6}
-     * @param target  uid being monitored
-     * @param dataLen length of the observed payload
+     * @param proto     {@link #PROTO_IPV4} or {@link #PROTO_IPV6}
+     * @param targetUid uid being monitored
+     * @param dataLen   length of the observed payload
      */
-    void network(int proto, int target, int dataLen);
+    void network(int proto, int targetUid, int dataLen);
 
 }
