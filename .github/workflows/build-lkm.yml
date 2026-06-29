@@ -1,4 +1,4 @@
-name: Build LKM for Re:Kernel
+name: Build ReKernel-X LKM
 on:
   workflow_dispatch:
 jobs:

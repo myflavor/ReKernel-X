@@ -1,0 +1,64 @@
+name: Build ReKernel-X AAR
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-aar:
+    name: Build AAR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK and CMake
+        run: |
+          sdkmanager --install \
+            "ndk;27.0.12077973" \
+            "cmake;3.22.1"
+
+      - name: Build AAR
+        working-directory: Develop/aar
+        run: |
+          chmod +x gradlew
+          ./gradlew :rekernel_x:assembleRelease
+
+      - name: Verify AAR
+        working-directory: Develop/aar
+        run: |
+          AAR=rekernel_x/build/outputs/aar/rekernel_x-release.aar
+          echo "=== AAR size ==="
+          ls -lh "$AAR"
+          echo ""
+          echo "=== .so files ==="
+          unzip -l "$AAR" | grep '\.so'
+          echo ""
+          echo "=== classes ==="
+          unzip -l "$AAR" | grep 'classes'
+          echo ""
+          echo "=== proguard ==="
+          unzip -p "$AAR" proguard.txt
+          echo ""
+          echo "=== .so count ==="
+          SO_COUNT=$(unzip -l "$AAR" | grep -c '\.so')
+          if [ "$SO_COUNT" -lt 4 ]; then
+            echo "ERROR: expected 4 .so files, found $SO_COUNT"
+            exit 1
+          fi
+
+      - name: Upload AAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rekernel_x-aar
+          path: Develop/aar/rekernel_x/build/outputs/aar/rekernel_x-release.aar
+          retention-days: 30

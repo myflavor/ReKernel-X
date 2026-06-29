@@ -1,8 +1,7 @@
-obj-m := rekernel.o
-rekernel-y := rekernel_main.o rekernel_netlink.o rekernel_binder.o rekernel_signal.o rekernel_netfilter.o
+rekernel_x-y := rekernel_x_main.o rekernel_x_genl.o rekernel_x_netuid.o rekernel_x_frozen.o rekernel_x_binder.o rekernel_x_signal.o rekernel_x_netfilter.o rekernel_x_binder_kp.o
 
-ccflags-$(CONFIG_REKERNEL_NETWORK) += -DNETWORK_FILTER
+obj-m += rekernel_x.o
 
-ifdef REKERNEL_VERSION
-ccflags-y += -DREKERNEL_VERSION=\"$(REKERNEL_VERSION)\"
+ifdef REKERNEL_X_VERSION
+ccflags-y += -DREKERNEL_X_VERSION=\"$(REKERNEL_X_VERSION)\"
 endif
