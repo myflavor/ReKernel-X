@@ -2,7 +2,7 @@
  * Copyright (c) Sakion Team. All rights reserved.
  * Copyright (c) myflavor <admin@myflv.cn>.
  *
- * File name: rekernelx_binder.c
+ * File name: rekernel_x_binder.c
  * Description: ReKernel-X binder trace hooks — sync/async transactions,
  *              replies, and async-buffer-full detection for frozen tasks.
  * Author: nep_timeline@outlook.com
@@ -46,11 +46,11 @@ void line_binder_alloc_new_buf_locked(void *data, size_t size, struct binder_all
 #ifdef DEBUG
 			pr_info("[ReKernel-X LKM] Binder Free buffer full! from=%d | target=%d\n", task_uid(current).val, task_uid(p).val);
 #endif
-			if (rekernelx_netlink_ready()) {
-				struct rekernelx_event event = {
-					.type = REKERNELX_EVT_BINDER,
+			if (rekernel_x_netlink_ready()) {
+				struct rekernel_x_event event = {
+					.type = REKERNEL_X_EVT_BINDER,
 					.u.binder = {
-						.binder_type = REKERNELX_BINDER_FREE_BUFFER_FULL,
+						.binder_type = REKERNEL_X_BINDER_FREE_BUFFER_FULL,
 						.oneway = 1,
 						.from_pid = task_tgid_nr(current),
 						.from_uid = task_uid(current).val,
@@ -96,11 +96,11 @@ void line_binder_reply(void *data, struct binder_proc *target_proc, struct binde
 #ifdef DEBUG
 		pr_info("[ReKernel-X LKM] Sync Binder Reply! from=%d | target=%d\n", task_uid(proc->tsk).val, task_uid(target_proc->tsk).val);
 #endif
-		if (rekernelx_netlink_ready()) {
-			struct rekernelx_event event = {
-				.type = REKERNELX_EVT_BINDER,
+		if (rekernel_x_netlink_ready()) {
+			struct rekernel_x_event event = {
+				.type = REKERNEL_X_EVT_BINDER,
 				.u.binder = {
-					.binder_type = REKERNELX_BINDER_REPLY,
+					.binder_type = REKERNEL_X_BINDER_REPLY,
 					.from_pid = task_tgid_nr(proc->tsk),
 					.from_uid = task_uid(proc->tsk).val,
 					.target_pid = task_tgid_nr(target_proc->tsk),
@@ -151,11 +151,11 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 #ifdef DEBUG
 		pr_info("[ReKernel-X LKM] Sync Binder Transaction! from=%d | target=%d\n", task_uid(proc->tsk).val, task_uid(target_proc->tsk).val);
 #endif
-		if (rekernelx_netlink_ready()) {
-			struct rekernelx_event event = {
-				.type = REKERNELX_EVT_BINDER,
+		if (rekernel_x_netlink_ready()) {
+			struct rekernel_x_event event = {
+				.type = REKERNEL_X_EVT_BINDER,
 				.u.binder = {
-					.binder_type = REKERNELX_BINDER_TRANSACTION,
+					.binder_type = REKERNEL_X_BINDER_TRANSACTION,
 					.from_pid = task_tgid_nr(proc->tsk),
 					.from_uid = task_uid(proc->tsk).val,
 					.target_pid = task_tgid_nr(target_proc->tsk),
@@ -195,11 +195,11 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 #ifdef DEBUG
 			pr_info("[ReKernel-X LKM] ASync Binder Transaction! from=%d | target=%d\n", task_uid(proc->tsk).val, task_uid(target_proc->tsk).val);
 #endif
-			if (rekernelx_netlink_ready()) {
-				struct rekernelx_event event = {
-					.type = REKERNELX_EVT_BINDER,
+			if (rekernel_x_netlink_ready()) {
+				struct rekernel_x_event event = {
+					.type = REKERNEL_X_EVT_BINDER,
 					.u.binder = {
-						.binder_type = REKERNELX_BINDER_TRANSACTION,
+						.binder_type = REKERNEL_X_BINDER_TRANSACTION,
 						.oneway = 1,
 						.from_pid = task_tgid_nr(proc->tsk),
 						.from_uid = task_uid(proc->tsk).val,

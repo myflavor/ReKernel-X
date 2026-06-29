@@ -2,7 +2,7 @@
  * Copyright (c) Sakion Team. All rights reserved.
  * Copyright (c) myflavor <admin@myflv.cn>.
  *
- * File name: rekernelx_binder_kp.c
+ * File name: rekernel_x_binder_kp.c
  * Description: ReKernel-X binder hooks via kprobe — resolves internal binder
  *              symbols via kallsyms and intercepts binder_proc_transaction to
  *              drop outdated async transactions for frozen tasks.

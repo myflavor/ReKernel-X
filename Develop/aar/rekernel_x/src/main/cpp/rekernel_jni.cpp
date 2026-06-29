@@ -5,7 +5,7 @@
  * group, receives nested-attribute event messages and dispatches them to the
  * Java ReKernelXCallback interface.
  *
- * ABI contract: attribute IDs must stay in sync with LKM-Source/rekernelx.h.
+ * ABI contract: attribute IDs must stay in sync with LKM-Source/rekernel_x.h.
  */
 #include <jni.h>
 #include <android/log.h>
@@ -27,60 +27,60 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
 /* ==========================================================================
- *  ABI mirror — attribute IDs must match LKM-Source/rekernelx.h.
+ *  ABI mirror — attribute IDs must match LKM-Source/rekernel_x.h.
  * ========================================================================== */
 
 /* SOL_NETLINK / NETLINK_ADD_MEMBERSHIP come from the system headers
  * (<sys/socket.h>, <linux/netlink.h>) — no local fallback. */
 
 /* rekernel genl commands */
-#define REKERNELX_C_EVENT                1
-#define REKERNELX_C_ADD_MONITOR_NET      2
-#define REKERNELX_C_DEL_MONITOR_NET      3
+#define REKERNEL_X_C_EVENT                1
+#define REKERNEL_X_C_ADD_MONITOR_NET      2
+#define REKERNEL_X_C_DEL_MONITOR_NET      3
 
-/* rekernel genl attributes — must match LKM-Source/rekernelx.h (range-blocked) */
-#define REKERNELX_A_EVENT                1
-#define REKERNELX_A_EVENT_TYPE           2
-#define REKERNELX_A_BINDER               10
-#define REKERNELX_A_BINDER_TYPE          11
-#define REKERNELX_A_BINDER_ONEWAY        12
-#define REKERNELX_A_BINDER_FROM_PID      13
-#define REKERNELX_A_BINDER_FROM_UID      14
-#define REKERNELX_A_BINDER_TARGET_PID    15
-#define REKERNELX_A_BINDER_TARGET_UID    16
-#define REKERNELX_A_BINDER_CODE          17
-#define REKERNELX_A_BINDER_RPC_NAME      18
-#define REKERNELX_A_SIGNAL               20
-#define REKERNELX_A_SIGNAL_SIGNAL        21
-#define REKERNELX_A_SIGNAL_KILLER_PID    22
-#define REKERNELX_A_SIGNAL_KILLER_UID    23
-#define REKERNELX_A_SIGNAL_DST_PID       24
-#define REKERNELX_A_SIGNAL_DST_UID       25
-#define REKERNELX_A_NETWORK              30
-#define REKERNELX_A_NETWORK_PROTO        31
-#define REKERNELX_A_NETWORK_TARGET_UID   32
-#define REKERNELX_A_NETWORK_DATA_LEN     33
-#define REKERNELX_A_UID                  40
+/* rekernel genl attributes — must match LKM-Source/rekernel_x.h (range-blocked) */
+#define REKERNEL_X_A_EVENT                1
+#define REKERNEL_X_A_EVENT_TYPE           2
+#define REKERNEL_X_A_BINDER               10
+#define REKERNEL_X_A_BINDER_TYPE          11
+#define REKERNEL_X_A_BINDER_ONEWAY        12
+#define REKERNEL_X_A_BINDER_FROM_PID      13
+#define REKERNEL_X_A_BINDER_FROM_UID      14
+#define REKERNEL_X_A_BINDER_TARGET_PID    15
+#define REKERNEL_X_A_BINDER_TARGET_UID    16
+#define REKERNEL_X_A_BINDER_CODE          17
+#define REKERNEL_X_A_BINDER_RPC_NAME      18
+#define REKERNEL_X_A_SIGNAL               20
+#define REKERNEL_X_A_SIGNAL_SIGNAL        21
+#define REKERNEL_X_A_SIGNAL_KILLER_PID    22
+#define REKERNEL_X_A_SIGNAL_KILLER_UID    23
+#define REKERNEL_X_A_SIGNAL_DST_PID       24
+#define REKERNEL_X_A_SIGNAL_DST_UID       25
+#define REKERNEL_X_A_NETWORK              30
+#define REKERNEL_X_A_NETWORK_PROTO        31
+#define REKERNEL_X_A_NETWORK_TARGET_UID   32
+#define REKERNEL_X_A_NETWORK_DATA_LEN     33
+#define REKERNEL_X_A_UID                  40
 
 /* event types */
-#define REKERNELX_EVT_BINDER             1
-#define REKERNELX_EVT_SIGNAL             2
-#define REKERNELX_EVT_NETWORK            3
+#define REKERNEL_X_EVT_BINDER             1
+#define REKERNEL_X_EVT_SIGNAL             2
+#define REKERNEL_X_EVT_NETWORK            3
 
 /* binder sub-types */
-#define REKERNELX_BINDER_TRANSACTION     0
-#define REKERNELX_BINDER_REPLY           1
-#define REKERNELX_BINDER_FREE_BUFFER_FULL 2
+#define REKERNEL_X_BINDER_TRANSACTION     0
+#define REKERNEL_X_BINDER_REPLY           1
+#define REKERNEL_X_BINDER_FREE_BUFFER_FULL 2
 
 /* network protocol */
-#define REKERNELX_NET_PROTO_IPV4         4
-#define REKERNELX_NET_PROTO_IPV6         6
+#define REKERNEL_X_NET_PROTO_IPV4         4
+#define REKERNEL_X_NET_PROTO_IPV6         6
 
 /* genl family metadata */
-#define REKERNELX_GENL_FAMILY_NAME   "rekernel_x"
-#define REKERNELX_GENL_MCGRP_NAME    "events"
-#define REKERNELX_GENL_VERSION       1
-#define REKERNELX_RPC_NAME_LEN       140
+#define REKERNEL_X_GENL_FAMILY_NAME   "rekernel_x"
+#define REKERNEL_X_GENL_MCGRP_NAME    "events"
+#define REKERNEL_X_GENL_VERSION       1
+#define REKERNEL_X_RPC_NAME_LEN       140
 
 /* ==========================================================================
  *  NLA (NetLink Attribute) helpers
@@ -198,7 +198,7 @@ static uint32_t find_mcast_group_id(struct nlattr *mcast_attr,
  */
 static int resolveFamily() {
     /* Build request: nlmsghdr + genlmsghdr + CTRL_ATTR_FAMILY_NAME */
-    const char *name = REKERNELX_GENL_FAMILY_NAME;
+    const char *name = REKERNEL_X_GENL_FAMILY_NAME;
     uint16_t name_len  = static_cast<uint16_t>(strlen(name) + 1);
     uint16_t attr_len  = NLA_HDRLEN + name_len;
     uint16_t total     = NLMSG_HDRLEN + GENL_HDRLEN + nla_align(attr_len);
@@ -264,7 +264,7 @@ static int resolveFamily() {
             fid = *static_cast<uint16_t *>(nla_data(attr));
             have_fid = true;
         } else if (type == CTRL_ATTR_MCAST_GROUPS) {
-            gid = find_mcast_group_id(attr, REKERNELX_GENL_MCGRP_NAME);
+            gid = find_mcast_group_id(attr, REKERNEL_X_GENL_MCGRP_NAME);
         }
     }
 
@@ -274,7 +274,7 @@ static int resolveFamily() {
     }
     if (gid == 0) {
         LOGE("resolveFamily: multicast group \"%s\" not found",
-             REKERNELX_GENL_MCGRP_NAME);
+             REKERNEL_X_GENL_MCGRP_NAME);
         return -1;
     }
 
@@ -302,12 +302,12 @@ static int sendCommand(uint8_t cmd, uint32_t uid) {
 
     auto *ghdr = reinterpret_cast<struct genlmsghdr *>(buf + NLMSG_HDRLEN);
     ghdr->cmd     = cmd;
-    ghdr->version  = REKERNELX_GENL_VERSION;
+    ghdr->version  = REKERNEL_X_GENL_VERSION;
     ghdr->reserved = 0;
 
     auto *nla = reinterpret_cast<struct nlattr *>(buf + NLMSG_HDRLEN + GENL_HDRLEN);
     nla->nla_len  = NLA_HDRLEN + 4;
-    nla->nla_type = REKERNELX_A_UID;
+    nla->nla_type = REKERNEL_X_A_UID;
     *static_cast<uint32_t *>(nla_data(nla)) = uid;
 
     /* g_send_mutex guards the fd against concurrent close in cleanup_globals. */
@@ -326,26 +326,26 @@ static void dispatch_event(JNIEnv *env, uint8_t event_type, struct nlattr *paylo
         return;
 
     switch (event_type) {
-        case REKERNELX_EVT_BINDER: {
+        case REKERNEL_X_EVT_BINDER: {
             int bpos = 0, bend = nla_datalen(payload_attr);
             auto *bbase = static_cast<uint8_t *>(nla_data(payload_attr));
             int32_t  binder_type = 0, oneway = 0, from_pid = 0, target_pid = 0, code = 0;
             uint32_t from_uid = 0, target_uid = 0;
-            char rpc_name[REKERNELX_RPC_NAME_LEN + 1] = {};
+            char rpc_name[REKERNEL_X_RPC_NAME_LEN + 1] = {};
 
             NLA_FOR_EACH_ATTR(bpos, bend, ba, bbase) {
                 int btype = ba->nla_type & NLA_TYPE_MASK;
                 switch (btype) {
-                    case REKERNELX_A_BINDER_TYPE:     binder_type = *static_cast<int32_t *>(nla_data(ba)); break;
-                    case REKERNELX_A_BINDER_ONEWAY:   oneway = *static_cast<int32_t *>(nla_data(ba)); break;
-                    case REKERNELX_A_BINDER_FROM_PID: from_pid = *static_cast<int32_t *>(nla_data(ba)); break;
-                    case REKERNELX_A_BINDER_FROM_UID: from_uid = *static_cast<uint32_t *>(nla_data(ba)); break;
-                    case REKERNELX_A_BINDER_TARGET_PID: target_pid = *static_cast<int32_t *>(nla_data(ba)); break;
-                    case REKERNELX_A_BINDER_TARGET_UID: target_uid = *static_cast<uint32_t *>(nla_data(ba)); break;
-                    case REKERNELX_A_BINDER_CODE:     code = *static_cast<int32_t *>(nla_data(ba)); break;
-                    case REKERNELX_A_BINDER_RPC_NAME: {
+                    case REKERNEL_X_A_BINDER_TYPE:     binder_type = *static_cast<int32_t *>(nla_data(ba)); break;
+                    case REKERNEL_X_A_BINDER_ONEWAY:   oneway = *static_cast<int32_t *>(nla_data(ba)); break;
+                    case REKERNEL_X_A_BINDER_FROM_PID: from_pid = *static_cast<int32_t *>(nla_data(ba)); break;
+                    case REKERNEL_X_A_BINDER_FROM_UID: from_uid = *static_cast<uint32_t *>(nla_data(ba)); break;
+                    case REKERNEL_X_A_BINDER_TARGET_PID: target_pid = *static_cast<int32_t *>(nla_data(ba)); break;
+                    case REKERNEL_X_A_BINDER_TARGET_UID: target_uid = *static_cast<uint32_t *>(nla_data(ba)); break;
+                    case REKERNEL_X_A_BINDER_CODE:     code = *static_cast<int32_t *>(nla_data(ba)); break;
+                    case REKERNEL_X_A_BINDER_RPC_NAME: {
                         int slen = nla_datalen(ba);
-                        if (slen > REKERNELX_RPC_NAME_LEN) slen = REKERNELX_RPC_NAME_LEN;
+                        if (slen > REKERNEL_X_RPC_NAME_LEN) slen = REKERNEL_X_RPC_NAME_LEN;
                         memcpy(rpc_name, nla_data(ba), slen);
                         rpc_name[slen] = '\0';
                         break;
@@ -366,7 +366,7 @@ static void dispatch_event(JNIEnv *env, uint8_t event_type, struct nlattr *paylo
             if (jRpcName) env->DeleteLocalRef(jRpcName);
             break;
         }
-        case REKERNELX_EVT_SIGNAL: {
+        case REKERNEL_X_EVT_SIGNAL: {
             int spos = 0, send = nla_datalen(payload_attr);
             auto *sbase = static_cast<uint8_t *>(nla_data(payload_attr));
             int32_t  sig = 0, killer_pid = 0, dst_pid = 0;
@@ -375,11 +375,11 @@ static void dispatch_event(JNIEnv *env, uint8_t event_type, struct nlattr *paylo
             NLA_FOR_EACH_ATTR(spos, send, sa, sbase) {
                 int stype = sa->nla_type & NLA_TYPE_MASK;
                 switch (stype) {
-                    case REKERNELX_A_SIGNAL_SIGNAL:     sig = *static_cast<int32_t *>(nla_data(sa)); break;
-                    case REKERNELX_A_SIGNAL_KILLER_PID: killer_pid = *static_cast<int32_t *>(nla_data(sa)); break;
-                    case REKERNELX_A_SIGNAL_KILLER_UID: killer_uid = *static_cast<uint32_t *>(nla_data(sa)); break;
-                    case REKERNELX_A_SIGNAL_DST_PID:    dst_pid = *static_cast<int32_t *>(nla_data(sa)); break;
-                    case REKERNELX_A_SIGNAL_DST_UID:    dst_uid = *static_cast<uint32_t *>(nla_data(sa)); break;
+                    case REKERNEL_X_A_SIGNAL_SIGNAL:     sig = *static_cast<int32_t *>(nla_data(sa)); break;
+                    case REKERNEL_X_A_SIGNAL_KILLER_PID: killer_pid = *static_cast<int32_t *>(nla_data(sa)); break;
+                    case REKERNEL_X_A_SIGNAL_KILLER_UID: killer_uid = *static_cast<uint32_t *>(nla_data(sa)); break;
+                    case REKERNEL_X_A_SIGNAL_DST_PID:    dst_pid = *static_cast<int32_t *>(nla_data(sa)); break;
+                    case REKERNEL_X_A_SIGNAL_DST_UID:    dst_uid = *static_cast<uint32_t *>(nla_data(sa)); break;
                 }
             }
 
@@ -391,7 +391,7 @@ static void dispatch_event(JNIEnv *env, uint8_t event_type, struct nlattr *paylo
                                 static_cast<jint>(dst_pid));
             break;
         }
-        case REKERNELX_EVT_NETWORK: {
+        case REKERNEL_X_EVT_NETWORK: {
             int npos = 0, nend = nla_datalen(payload_attr);
             auto *nbase = static_cast<uint8_t *>(nla_data(payload_attr));
             int32_t  proto = 0, data_len = 0;
@@ -400,9 +400,9 @@ static void dispatch_event(JNIEnv *env, uint8_t event_type, struct nlattr *paylo
             NLA_FOR_EACH_ATTR(npos, nend, na, nbase) {
                 int ntype = na->nla_type & NLA_TYPE_MASK;
                 switch (ntype) {
-                    case REKERNELX_A_NETWORK_PROTO:       proto = *static_cast<int32_t *>(nla_data(na)); break;
-                    case REKERNELX_A_NETWORK_TARGET_UID:  target_uid = *static_cast<uint32_t *>(nla_data(na)); break;
-                    case REKERNELX_A_NETWORK_DATA_LEN:    data_len = *static_cast<int32_t *>(nla_data(na)); break;
+                    case REKERNEL_X_A_NETWORK_PROTO:       proto = *static_cast<int32_t *>(nla_data(na)); break;
+                    case REKERNEL_X_A_NETWORK_TARGET_UID:  target_uid = *static_cast<uint32_t *>(nla_data(na)); break;
+                    case REKERNEL_X_A_NETWORK_DATA_LEN:    data_len = *static_cast<int32_t *>(nla_data(na)); break;
                 }
             }
 
@@ -470,19 +470,19 @@ static void *recv_thread(void *) {
 
             auto *ghdr = reinterpret_cast<struct genlmsghdr *>(
                 reinterpret_cast<uint8_t *>(nlh) + NLMSG_HDRLEN);
-            if (ghdr->cmd != REKERNELX_C_EVENT)
+            if (ghdr->cmd != REKERNEL_X_C_EVENT)
                 continue;
 
-            /* Find REKERNELX_A_EVENT (nested) attribute */
+            /* Find REKERNEL_X_A_EVENT (nested) attribute */
             int pos = NLMSG_HDRLEN + GENL_HDRLEN;
             int end = static_cast<int>(nlh->nlmsg_len);
 
             NLA_FOR_EACH_ATTR(pos, end, attr, reinterpret_cast<uint8_t *>(nlh)) {
                 int atype = attr->nla_type & NLA_TYPE_MASK;
-                if (atype != REKERNELX_A_EVENT || nla_datalen(attr) < NLA_HDRLEN)
+                if (atype != REKERNEL_X_A_EVENT || nla_datalen(attr) < NLA_HDRLEN)
                     continue;
 
-                /* Parse inside the REKERNELX_A_EVENT nest */
+                /* Parse inside the REKERNEL_X_A_EVENT nest */
                 int epos = 0, eend = nla_datalen(attr);
                 auto *ebase = static_cast<uint8_t *>(nla_data(attr));
                 uint8_t event_type = 0;
@@ -490,11 +490,11 @@ static void *recv_thread(void *) {
 
                 NLA_FOR_EACH_ATTR(epos, eend, ea, ebase) {
                     int etype = ea->nla_type & NLA_TYPE_MASK;
-                    if (etype == REKERNELX_A_EVENT_TYPE && nla_datalen(ea) >= 1) {
+                    if (etype == REKERNEL_X_A_EVENT_TYPE && nla_datalen(ea) >= 1) {
                         event_type = *static_cast<uint8_t *>(nla_data(ea));
-                    } else if (etype == REKERNELX_A_BINDER ||
-                               etype == REKERNELX_A_SIGNAL ||
-                               etype == REKERNELX_A_NETWORK) {
+                    } else if (etype == REKERNEL_X_A_BINDER ||
+                               etype == REKERNEL_X_A_SIGNAL ||
+                               etype == REKERNEL_X_A_NETWORK) {
                         payload_attr = ea;
                     }
                 }
@@ -672,7 +672,7 @@ Java_cn_myflv_kernel_ReKernelX_addMonitorNet(
         JNIEnv *env, jclass /* clazz */, jint uid) {
     if (!g_running.load() || g_family_id == 0)
         return JNI_FALSE;
-    return sendCommand(REKERNELX_C_ADD_MONITOR_NET, static_cast<uint32_t>(uid)) == 0
+    return sendCommand(REKERNEL_X_C_ADD_MONITOR_NET, static_cast<uint32_t>(uid)) == 0
            ? JNI_TRUE : JNI_FALSE;
 }
 
@@ -681,6 +681,6 @@ Java_cn_myflv_kernel_ReKernelX_delMonitorNet(
         JNIEnv *env, jclass /* clazz */, jint uid) {
     if (!g_running.load() || g_family_id == 0)
         return JNI_FALSE;
-    return sendCommand(REKERNELX_C_DEL_MONITOR_NET, static_cast<uint32_t>(uid)) == 0
+    return sendCommand(REKERNEL_X_C_DEL_MONITOR_NET, static_cast<uint32_t>(uid)) == 0
            ? JNI_TRUE : JNI_FALSE;
 }

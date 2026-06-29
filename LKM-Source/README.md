@@ -6,15 +6,15 @@ ReKernel-X Loadable Kernel Module source code. Supports GKI kernels from Android
 
 | File | Description |
 |---|---|
-| `rekernelx_main.c` | Module entry/exit, init/exit glue |
-| `rekernelx_genl.c` | Generic Netlink transport |
-| `rekernelx_binder.c` | Binder transaction hooks |
-| `rekernelx_binder_kp.c` | Binder kprobe hooks |
-| `rekernelx_signal.c` | Signal hooks |
-| `rekernelx_netfilter.c` | Netfilter hooks |
-| `rekernelx_netuid.c` | Network monitor UID hashmap |
-| `rekernelx_frozen.c` | Task frozen-state predicate |
-| `rekernelx.h` | Shared header, ABI definitions |
+| `rekernel_x_main.c` | Module entry/exit, init/exit glue |
+| `rekernel_x_genl.c` | Generic Netlink transport |
+| `rekernel_x_binder.c` | Binder transaction hooks |
+| `rekernel_x_binder_kp.c` | Binder kprobe hooks |
+| `rekernel_x_signal.c` | Signal hooks |
+| `rekernel_x_netfilter.c` | Netfilter hooks |
+| `rekernel_x_netuid.c` | Network monitor UID hashmap |
+| `rekernel_x_frozen.c` | Task frozen-state predicate |
+| `rekernel_x.h` | Shared header, ABI definitions |
 | `Makefile` | Kernel module build rules |
 | `Kconfig` | Kernel config option |
 
@@ -33,18 +33,18 @@ make -C /opt/ddk/kdir/<KMI> \
     M=/opt/ddk/src/<KMI>/drivers/android \
     CONFIG_REKERNEL_X=m \
     CC="clang" \
-    REKERNELX_VERSION="v1.0" \
+    REKERNEL_X_VERSION="v1.0" \
     modules
 ```
 
 ## Version
 
-The module version is defined in `rekernelx.h`:
+The module version is defined in `rekernel_x.h`:
 
 ```c
-#ifndef REKERNELX_VERSION
-#define REKERNELX_VERSION "snapshot"
+#ifndef REKERNEL_X_VERSION
+#define REKERNEL_X_VERSION "snapshot"
 #endif
 ```
 
-Pass `REKERNELX_VERSION` as a make variable to override the default `snapshot` value. The version is printed in `dmesg` on module load.
+Pass `REKERNEL_X_VERSION` as a make variable to override the default `snapshot` value. The version is printed in `dmesg` on module load.

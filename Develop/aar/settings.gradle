@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "rekernelx-aar"
-include ':rekernelx'
+rootProject.name = "rekernel_x-aar"
+include ':rekernel_x'

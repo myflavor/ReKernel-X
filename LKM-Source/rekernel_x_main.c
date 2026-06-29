@@ -2,7 +2,7 @@
  * Copyright (c) Sakion Team. All rights reserved.
  * Copyright (c) myflavor <admin@myflv.cn>.
  *
- * File name: rekernelx_main.c
+ * File name: rekernel_x_main.c
  * Description: ReKernel-X module entry — init/exit glue wiring the genl
  *              transport and the binder/signal/netfilter/kprobe hooks.
  * Author: nep_timeline@outlook.com
@@ -18,7 +18,7 @@ static int __init start_rekernel(void)
 #ifdef DEBUG
 	pr_info("Debug mode is enabled!\n");
 #endif
-	pr_info("ReKernel-X %s | DEVELOPER: Sakion Team | GENL FAMILY: %s\n", REKERNELX_VERSION, REKERNELX_GENL_FAMILY_NAME);
+	pr_info("ReKernel-X %s | DEVELOPER: Sakion Team | GENL FAMILY: %s\n", REKERNEL_X_VERSION, REKERNEL_X_GENL_FAMILY_NAME);
 
 	if (register_genl() != LINE_SUCCESS) {
 		pr_err("%s: Failed to register genl family!\n", __func__);

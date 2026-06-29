@@ -19,8 +19,8 @@ packaged as an **AAR** so app developers don't have to speak raw netlink.
 | Path | Purpose |
 |---|---|
 | `aar/` | Android AAR project — the client library |
-| `aar/rekernelx/src/main/cpp/rekernel_jni.cpp` | C++ netlink client + JNI bridge |
-| `aar/rekernelx/src/main/java/cn/myflv/kernel/` | Java API (`ReKernelX`, `ReKernelXCallback`) |
+| `aar/rekernel_x/src/main/cpp/rekernel_jni.cpp` | C++ netlink client + JNI bridge |
+| `aar/rekernel_x/src/main/java/cn/myflv/kernel/` | Java API (`ReKernelX`, `ReKernelXCallback`) |
 | `aar/README.md` | Build instructions + full usage example |
 
 See [`aar/README.md`](aar/README.md) for build prerequisites, ABI-compatibility
@@ -30,14 +30,14 @@ notes, and a complete Java usage snippet.
 
 The client resolves the `"rekernel_x"` genl family by name via
 `CTRL_CMD_GETFAMILY`, joins the `"events"` multicast group, and receives binary
-`struct rekernelx_event` messages — a tagged union read by fixed offset, **not**
+`struct rekernel_x_event` messages — a tagged union read by fixed offset, **not**
 a formatted string. It sends `MONITOR_NET` / `DEL_MONITOR_NET` commands carrying
 a uid to be monitored.
 
-The on-wire ABI is defined in [`../LKM-Source/rekernelx.h`](../LKM-Source/rekernelx.h)
-and mirrored byte-for-byte in the JNI source. `static_assert(sizeof(rekernelx_event) == 172)`
+The on-wire ABI is defined in [`../LKM-Source/rekernel_x.h`](../LKM-Source/rekernel_x.h)
+and mirrored byte-for-byte in the JNI source. `static_assert(sizeof(rekernel_x_event) == 172)`
 catches drift at compile time. **If the kernel ABI changes, update both
-`rekernelx.h` and `rekernel_jni.cpp` together.**
+`rekernel_x.h` and `rekernel_jni.cpp` together.**
 
 ## Quick start
 

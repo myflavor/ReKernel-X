@@ -43,13 +43,13 @@ jobs:
         working-directory: Develop/aar
         run: |
           chmod +x gradlew
-          ./gradlew :rekernelx:assembleRelease
+          ./gradlew :rekernel_x:assembleRelease
 
       - name: Upload AAR artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rekernelx-aar
-          path: Develop/aar/rekernelx/build/outputs/aar/rekernelx-release.aar
+          name: rekernel_x-aar
+          path: Develop/aar/rekernelx/build/outputs/aar/rekernel_x-release.aar
 
   build-lkm:
     name: Build LKM
@@ -122,7 +122,7 @@ jobs:
       - name: Upload ZIP artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rekernelx-zip
+          name: rekernel_x-zip
           path: ReKernel-X-${{ inputs.version }}.zip
 
   release:
@@ -138,16 +138,16 @@ jobs:
       - name: Download ZIP
         uses: actions/download-artifact@v4
         with:
-          name: rekernelx-zip
+          name: rekernel_x-zip
 
       - name: Download AAR
         uses: actions/download-artifact@v4
         with:
-          name: rekernelx-aar
+          name: rekernel_x-aar
 
       - name: Rename AAR
         run: |
-          mv rekernelx-release.aar rekernelx-${{ inputs.version }}.aar
+          mv rekernel_x-release.aar rekernel_x-${{ inputs.version }}.aar
 
       - name: Push update.json to magisk branch
         env:
@@ -192,4 +192,4 @@ jobs:
             --title "ReKernel-X $VERSION" \
             --notes "${{ inputs.changelog }}" \
             ReKernel-X-${VERSION}.zip \
-            rekernelx-${VERSION}.aar
+            rekernel_x-${VERSION}.aar

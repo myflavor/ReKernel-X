@@ -2,7 +2,7 @@
  * Copyright (c) Sakion Team. All rights reserved.
  * Copyright (c) myflavor <admin@myflv.cn>.
  *
- * File name: rekernelx_signal.c
+ * File name: rekernel_x_signal.c
  * Description: ReKernel-X signal trace hook — fatal signals sent to frozen tasks.
  * Author: nep_timeline@outlook.com
  */
@@ -27,9 +27,9 @@ void line_signal(void *data, int sig, struct task_struct *killer, struct task_st
 #ifdef DEBUG
 		pr_info("[ReKernel-X LKM] Process Signal! signal=%d\n", sig);
 #endif
-		if (rekernelx_netlink_ready()) {
-			struct rekernelx_event event = {
-				.type = REKERNELX_EVT_SIGNAL,
+		if (rekernel_x_netlink_ready()) {
+			struct rekernel_x_event event = {
+				.type = REKERNEL_X_EVT_SIGNAL,
 				.u.signal = {
 					.signal = sig,
 					.killer_pid = task_tgid_nr(killer),

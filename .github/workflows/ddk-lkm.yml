@@ -19,7 +19,7 @@ on:
         type: string
 
 jobs:
-  build-rekernelx-ko:
+  build-rekernel_x-ko:
     name: Build rekernel_x.ko for ${{ inputs.kmi }}-${{ inputs.ddk_release }}
     runs-on: ubuntu-latest
     container:
@@ -47,7 +47,7 @@ jobs:
             M=/opt/ddk/src/$KMI/drivers/android \
             CONFIG_REKERNEL_X=m \
             CC="clang" \
-            REKERNELX_VERSION="${{ inputs.version }}" \
+            REKERNEL_X_VERSION="${{ inputs.version }}" \
             modules
 
           echo "=== Build completed ==="

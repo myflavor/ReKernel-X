@@ -11,17 +11,17 @@ JNI implementation of the ReKernel-X Generic Netlink client, packaged as an Andr
 ```bash
 export JAVA_HOME=/path/to/jdk17
 export ANDROID_HOME=/path/to/Android/Sdk
-./gradlew :rekernelx:assembleRelease
+./gradlew :rekernel_x:assembleRelease
 ```
 
 Output: `rekernel/build/outputs/aar/rekernel-release.aar`
 
 ## ABI Compatibility
 
-The JNI structures mirror `LKM-Source/rekernelx.h` byte-for-byte (tagged union, `#pragma pack(1)`).
-`static_assert(sizeof(rekernelx_event)==172)` enforces this at compile time.
+The JNI structures mirror `LKM-Source/rekernel_x.h` byte-for-byte (tagged union, `#pragma pack(1)`).
+`static_assert(sizeof(rekernel_x_event)==172)` enforces this at compile time.
 
-If the kernel ABI changes, update both `rekernelx.h` and `rekernel_jni.cpp` in tandem.
+If the kernel ABI changes, update both `rekernel_x.h` and `rekernel_jni.cpp` in tandem.
 
 ## Usage
 

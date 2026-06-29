@@ -2,7 +2,7 @@
  * Copyright (c) Sakion Team. All rights reserved.
  * Copyright (c) myflavor <admin@myflv.cn>.
  *
- * File name: rekernelx_netfilter.c
+ * File name: rekernel_x_netfilter.c
  * Description: ReKernel-X netfilter hook — measures inbound TCP payload for
  *              monitored user-app uids (IPv4/IPv6).
  * Author: nep_timeline@outlook.com
@@ -61,7 +61,7 @@ static int parse_tcp_ipv4(struct sk_buff *skb, __u8 *proto, int *data_len)
 	if (*data_len <= 0 && !th->syn && !th->fin && !th->rst)
 		return -1;
 
-	*proto = REKERNELX_NET_PROTO_IPV4;
+	*proto = REKERNEL_X_NET_PROTO_IPV4;
 	return 0;
 }
 
@@ -94,12 +94,12 @@ static int parse_tcp_ipv6(struct sk_buff *skb, __u8 *proto, int *data_len)
 	if (*data_len <= 0 && !th->syn && !th->fin && !th->rst)
 		return -1;
 
-	*proto = REKERNELX_NET_PROTO_IPV6;
+	*proto = REKERNEL_X_NET_PROTO_IPV6;
 	return 0;
 }
 #endif
 
-static unsigned int rekernelx_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
+static unsigned int rekernel_x_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
 	const struct nf_hook_state *state)
 {
 	struct sock *sk;
@@ -143,9 +143,9 @@ static unsigned int rekernelx_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
 #ifdef DEBUG
 	pr_info("[ReKernel-X LKM] Receive net data! target=%d\n", uid);
 #endif
-	if (rekernelx_netlink_ready()) {
-		struct rekernelx_event event = {
-			.type = REKERNELX_EVT_NETWORK,
+	if (rekernel_x_netlink_ready()) {
+		struct rekernel_x_event event = {
+			.type = REKERNEL_X_EVT_NETWORK,
 			.u.network = {
 				.proto = proto,
 				.target_uid = uid,
@@ -159,16 +159,16 @@ static unsigned int rekernelx_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
 }
 
 /* Only monitor input network packages */
-static struct nf_hook_ops rekernelx_nf_ops[] = {
+static struct nf_hook_ops rekernel_x_nf_ops[] = {
 	{
-		.hook     = rekernelx_pkg_ipv4_ipv6_in,
+		.hook     = rekernel_x_pkg_ipv4_ipv6_in,
 		.pf       = NFPROTO_IPV4,
 		.hooknum  = NF_INET_LOCAL_IN,
 		.priority = NF_IP_PRI_SELINUX_LAST + 1,
 	},
 #if IS_ENABLED(CONFIG_IPV6)
 	{
-		.hook     = rekernelx_pkg_ipv4_ipv6_in,
+		.hook     = rekernel_x_pkg_ipv4_ipv6_in,
 		.pf       = NFPROTO_IPV6,
 		.hooknum  = NF_INET_LOCAL_IN,
 		.priority = NF_IP6_PRI_SELINUX_LAST + 1,
@@ -182,7 +182,7 @@ void unregister_netfilter(void)
 
 	rtnl_lock();
 	for_each_net(net) {
-		nf_unregister_net_hooks(net, rekernelx_nf_ops, ARRAY_SIZE(rekernelx_nf_ops));
+		nf_unregister_net_hooks(net, rekernel_x_nf_ops, ARRAY_SIZE(rekernel_x_nf_ops));
 	}
 	rtnl_unlock();
 
@@ -198,7 +198,7 @@ int register_netfilter(void)
 
 	rtnl_lock();
 	for_each_net(net) {
-		rc = nf_register_net_hooks(net, rekernelx_nf_ops, ARRAY_SIZE(rekernelx_nf_ops));
+		rc = nf_register_net_hooks(net, rekernel_x_nf_ops, ARRAY_SIZE(rekernel_x_nf_ops));
 		if (rc != LINE_SUCCESS) {
 			pr_err("register netfilter hooks failed, rc=%d\n", rc);
 			break;
