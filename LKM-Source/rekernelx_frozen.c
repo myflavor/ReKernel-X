@@ -1,7 +1,8 @@
 /*
  * Copyright (c) Sakion Team. All rights reserved.
+ * Copyright (c) myflavor <admin@myflv.cn>.
  *
- * File name: frozen.c
+ * File name: rekernelx_frozen.c
  * Description: task frozen-state predicate, version-compatible across the
  *              supported kernel range. Used by the binder/signal/kprobe hooks.
  * Author: nep_timeline@outlook.com

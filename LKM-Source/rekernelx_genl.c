@@ -1,8 +1,9 @@
 /*
  * Copyright (c) Sakion Team. All rights reserved.
+ * Copyright (c) myflavor <admin@myflv.cn>.
  *
- * File name: genl.c
- * Description: rekernel generic netlink transport — family registration,
+ * File name: rekernelx_genl.c
+ * Description: ReKernel-X generic netlink transport — family registration,
  *              event serialisation (NLA) and multicast to userspace.
  * Author: nep_timeline@outlook.com
  */

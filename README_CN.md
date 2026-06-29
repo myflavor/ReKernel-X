@@ -5,6 +5,8 @@
 
 使墓碑用户获得更好的使用体验。
 
+基于 Sakion Team 的 [Re:Kernel](https://github.com/Sakion-Team/Re-Kernel) v9.2 分支开发。
+
 ## 许可
 此项目正在使用 [GPL 许可证](LICENSE), 如果需要对此项目进行修改或二次分发，请同样保持开源。
 

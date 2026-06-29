@@ -1,8 +1,9 @@
 /*
  * Copyright (c) Sakion Team. All rights reserved.
+ * Copyright (c) myflavor <admin@myflv.cn>.
  *
- * File name: main.c
- * Description: rekernel module entry — init/exit glue wiring the genl
+ * File name: rekernelx_main.c
+ * Description: ReKernel-X module entry — init/exit glue wiring the genl
  *              transport and the binder/signal/netfilter/kprobe hooks.
  * Author: nep_timeline@outlook.com
  */

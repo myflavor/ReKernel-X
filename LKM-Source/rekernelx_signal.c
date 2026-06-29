@@ -1,8 +1,9 @@
 /*
  * Copyright (c) Sakion Team. All rights reserved.
+ * Copyright (c) myflavor <admin@myflv.cn>.
  *
- * File name: signal.c
- * Description: rekernel signal trace hook — fatal signals sent to frozen tasks.
+ * File name: rekernelx_signal.c
+ * Description: ReKernel-X signal trace hook — fatal signals sent to frozen tasks.
  * Author: nep_timeline@outlook.com
  */
 #include <linux/printk.h>

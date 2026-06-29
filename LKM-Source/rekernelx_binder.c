@@ -1,8 +1,9 @@
 /*
  * Copyright (c) Sakion Team. All rights reserved.
+ * Copyright (c) myflavor <admin@myflv.cn>.
  *
- * File name: binder.c
- * Description: rekernel binder trace hooks — sync/async transactions,
+ * File name: rekernelx_binder.c
+ * Description: ReKernel-X binder trace hooks — sync/async transactions,
  *              replies, and async-buffer-full detection for frozen tasks.
  * Author: nep_timeline@outlook.com
  */

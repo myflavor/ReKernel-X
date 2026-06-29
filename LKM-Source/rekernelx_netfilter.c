@@ -1,8 +1,9 @@
 /*
  * Copyright (c) Sakion Team. All rights reserved.
+ * Copyright (c) myflavor <admin@myflv.cn>.
  *
- * File name: netfilter.c
- * Description: rekernel netfilter hook — measures inbound TCP payload for
+ * File name: rekernelx_netfilter.c
+ * Description: ReKernel-X netfilter hook — measures inbound TCP payload for
  *              monitored user-app uids (IPv4/IPv6).
  * Author: nep_timeline@outlook.com
  */

@@ -4,6 +4,8 @@
 
 Make tombstone users get a better experience. ([简体中文](README_CN.md))
 
+Based on [Re:Kernel](https://github.com/Sakion-Team/Re-Kernel) v9.2 by Sakion Team.
+
 ## License
 This project is using a [GPL License](LICENSE), If you need to modify or redistribute this project, please also keep it open source.
 
