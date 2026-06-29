@@ -135,8 +135,8 @@ int sendMessage(struct rekernel_x_event *event)
         payload = nla_nest_start(skb, REKERNEL_X_A_BINDER);
         if (!payload)
             goto nla_fail;
-        if (nla_put_u8(skb, REKERNEL_X_A_BINDER_TYPE, b->binder_type) ||
-            nla_put_u8(skb, REKERNEL_X_A_BINDER_ONEWAY, b->oneway) ||
+        if (nla_put_u32(skb, REKERNEL_X_A_BINDER_TYPE, b->binder_type) ||
+            nla_put_u32(skb, REKERNEL_X_A_BINDER_ONEWAY, b->oneway) ||
             nla_put_s32(skb, REKERNEL_X_A_BINDER_FROM_PID, b->from_pid) ||
             nla_put_u32(skb, REKERNEL_X_A_BINDER_FROM_UID, b->from_uid) ||
             nla_put_s32(skb, REKERNEL_X_A_BINDER_TARGET_PID, b->target_pid) ||
@@ -168,7 +168,7 @@ int sendMessage(struct rekernel_x_event *event)
         payload = nla_nest_start(skb, REKERNEL_X_A_NETWORK);
         if (!payload)
             goto nla_fail;
-        if (nla_put_u8(skb, REKERNEL_X_A_NETWORK_PROTO, n->proto) ||
+        if (nla_put_u32(skb, REKERNEL_X_A_NETWORK_PROTO, n->proto) ||
             nla_put_u32(skb, REKERNEL_X_A_NETWORK_TARGET_UID, n->target_uid) ||
             nla_put_s32(skb, REKERNEL_X_A_NETWORK_DATA_LEN, n->data_len))
             goto nla_fail;

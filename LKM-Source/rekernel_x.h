@@ -62,8 +62,8 @@ enum rekernel_x_genl_attr {
 
 	/* 10–19: binder event sub-attributes (inside REKERNEL_X_A_BINDER) */
 	REKERNEL_X_A_BINDER         = 10, /* NLA_NESTED: binder event fields */
-	REKERNEL_X_A_BINDER_TYPE    = 11, /* NLA_U8: enum rekernel_x_binder_type */
-	REKERNEL_X_A_BINDER_ONEWAY  = 12, /* NLA_U8 */
+	REKERNEL_X_A_BINDER_TYPE    = 11, /* NLA_U32: enum rekernel_x_binder_type */
+	REKERNEL_X_A_BINDER_ONEWAY  = 12, /* NLA_U32 */
 	REKERNEL_X_A_BINDER_FROM_PID   = 13, /* NLA_S32 */
 	REKERNEL_X_A_BINDER_FROM_UID   = 14, /* NLA_U32 */
 	REKERNEL_X_A_BINDER_TARGET_PID = 15, /* NLA_S32 */
@@ -81,7 +81,7 @@ enum rekernel_x_genl_attr {
 
 	/* 30–39: network event sub-attributes (inside REKERNEL_X_A_NETWORK) */
 	REKERNEL_X_A_NETWORK        = 30, /* NLA_NESTED: network event fields */
-	REKERNEL_X_A_NETWORK_PROTO  = 31, /* NLA_U8: enum rekernel_x_net_proto */
+	REKERNEL_X_A_NETWORK_PROTO  = 31, /* NLA_U32: enum rekernel_x_net_proto */
 	REKERNEL_X_A_NETWORK_TARGET_UID = 32, /* NLA_U32 */
 	REKERNEL_X_A_NETWORK_DATA_LEN   = 33, /* NLA_S32 */
 
