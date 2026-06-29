@@ -1,4 +1,4 @@
-name: Build ReKernelX AAR
+name: Build ReKernel-X AAR
 
 on:
   workflow_dispatch:
