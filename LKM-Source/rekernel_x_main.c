@@ -29,37 +29,42 @@ static int __init start_rekernel(void)
 
 	if (register_binder() != LINE_SUCCESS) {
 		pr_err("%s: Failed to hook binder!\n", __func__);
-		return LINE_ERROR;
+		goto err_binder;
 	}
 
 	if (register_signal() != LINE_SUCCESS) {
 		pr_err("%s: Failed to hook signal!\n", __func__);
-		return LINE_ERROR;
+		goto err_signal;
 	}
 
 	if (register_netfilter() != LINE_SUCCESS) {
 		pr_err("%s: Failed to hook netfilter!\n", __func__);
-		return LINE_ERROR;
+		goto err_netfilter;
 	}
 
 #ifdef CLEAN_UP_ASYNC_BINDER
-	if (register_kp() != LINE_SUCCESS) {
-		pr_err("%s: Failed to hook kprobe!\n", __func__);
-		return LINE_ERROR;
-	}
+	register_binder_kp();
 #endif
 
 	pr_info("ReKernel-X hooked!\n");
 	return LINE_SUCCESS;
+
+err_netfilter:
+	unregister_signal();
+err_signal:
+	unregister_binder();
+err_binder:
+	unregister_genl();
+	return LINE_ERROR;
 }
 
 static void __exit exit_rekernel(void)
 {
 	pr_info("ReKernel-X closing...\n");
-	unregister_binder();
-	unregister_signal();
+	unregister_binder_kp();
 	unregister_netfilter();
-	unregister_kp();
+	unregister_signal();
+	unregister_binder();
 	unregister_genl();
 }
 

@@ -9,10 +9,13 @@
 #include <linux/printk.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/types.h>
 #include <linux/sched.h>
 #include <linux/sched/signal.h>
 #include <trace/hooks/signal.h>
 #include "rekernel_x.h"
+
+static bool re_signal_hook;
 
 void line_signal(void *data, int sig, struct task_struct *killer, struct task_struct *dst)
 {
@@ -52,11 +55,14 @@ int register_signal(void)
 		pr_err("register_trace_android_vh_do_send_sig_info failed, rc=%d\n", rc);
 		return rc;
 	}
-
+	re_signal_hook = true;
 	return LINE_SUCCESS;
 }
 
 void unregister_signal(void)
 {
-	unregister_trace_android_vh_do_send_sig_info(line_signal, NULL);
+	if (re_signal_hook) {
+		unregister_trace_android_vh_do_send_sig_info(line_signal, NULL);
+		re_signal_hook = false;
+	}
 }

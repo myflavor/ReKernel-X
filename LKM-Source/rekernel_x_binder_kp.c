@@ -148,13 +148,15 @@ static struct kprobe kp_binder_proc_transaction = {
 	.pre_handler = binder_proc_transaction_pre
 };
 
-int __nocfi register_kp(void) {
+static bool re_kp_binder_proc_registered;
+
+void __nocfi register_binder_kp(void) {
 	int rc = LINE_SUCCESS;
 
 	rc = register_kprobe(&kp_kallsyms_lookup_name);
 	if (rc != LINE_SUCCESS) {
-		pr_err("register kprobe hooks failed, rc=%d\n", rc);
-		return rc;
+		pr_err("register kallsyms_lookup_name kprobe failed, rc=%d (binder async-cleanup disabled)\n", rc);
+		return;
 	}
 	re_kallsyms_lookup_name = (void*)kp_kallsyms_lookup_name.addr;
 	unregister_kprobe(&kp_kallsyms_lookup_name);
@@ -164,20 +166,21 @@ int __nocfi register_kp(void) {
 	re_binder_stats = (void*)re_kallsyms_lookup_name("binder_stats");
 
 	if (re_binder_transaction_buffer_release == NULL || re_binder_alloc_free_buf == NULL || re_binder_stats == NULL) {
-		rc = -EINVAL;
-		pr_err("register kprobe kallsyms_lookup_name failed, rc=%d\n", rc);
-		return rc;
+		pr_err("resolve binder symbols failed (binder async-cleanup disabled)\n");
+		return;
 	}
 
-	register_kprobe(&kp_binder_proc_transaction);
+	rc = register_kprobe(&kp_binder_proc_transaction);
 	if (rc != LINE_SUCCESS) {
-		pr_err("register binder_proc_transaction hooks failed, rc=%d\n", rc);
-		return rc;
+		pr_err("register binder_proc_transaction kprobe failed, rc=%d (binder async-cleanup disabled)\n", rc);
+		return;
 	}
-
-	return LINE_SUCCESS;
+	re_kp_binder_proc_registered = true;
 }
 
-void unregister_kp(void) {
-	unregister_kprobe(&kp_binder_proc_transaction);
+void unregister_binder_kp(void) {
+	if (re_kp_binder_proc_registered) {
+		unregister_kprobe(&kp_binder_proc_transaction);
+		re_kp_binder_proc_registered = false;
+	}
 }

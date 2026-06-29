@@ -69,6 +69,11 @@ void line_binder_alloc_new_buf_locked(void *data, size_t size, struct binder_all
 struct hlist_head *binder_procs = NULL;
 struct mutex *binder_procs_lock = NULL;
 
+static bool re_binder_hook_alloc_buf;
+static bool re_binder_hook_preset;
+static bool re_binder_hook_reply;
+static bool re_binder_hook_trans;
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
 void line_binder_preset(void *data, struct hlist_head *hhead,
 	struct mutex *lock, struct binder_proc *proc)
@@ -218,33 +223,57 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 int register_binder(void)
 {
 	int rc = LINE_SUCCESS;
+
 	rc = register_trace_android_vh_binder_alloc_new_buf_locked(line_binder_alloc_new_buf_locked, NULL);
 	if (rc != LINE_SUCCESS) {
 		pr_err("register_trace_android_vh_binder_alloc_new_buf_locked failed, rc=%d\n", rc);
-		return rc;
+		goto err;
 	}
+	re_binder_hook_alloc_buf = true;
+
 	rc = register_trace_android_vh_binder_preset(line_binder_preset, NULL);
 	if (rc != LINE_SUCCESS) {
 		pr_err("register_trace_android_vh_binder_preset failed, rc=%d\n", rc);
-		return rc;
+		goto err;
 	}
+	re_binder_hook_preset = true;
+
 	rc = register_trace_android_vh_binder_reply(line_binder_reply, NULL);
 	if (rc != LINE_SUCCESS) {
 		pr_err("register_trace_android_vh_binder_reply failed, rc=%d\n", rc);
-		return rc;
+		goto err;
 	}
+	re_binder_hook_reply = true;
+
 	rc = register_trace_android_vh_binder_trans(line_binder_transaction, NULL);
 	if (rc != LINE_SUCCESS) {
 		pr_err("register_trace_android_vh_binder_trans failed, rc=%d\n", rc);
-		return rc;
+		goto err;
 	}
+	re_binder_hook_trans = true;
+
 	return LINE_SUCCESS;
+err:
+	unregister_binder();
+	return rc;
 }
 
 void unregister_binder(void)
 {
-	unregister_trace_android_vh_binder_alloc_new_buf_locked(line_binder_alloc_new_buf_locked, NULL);
-	unregister_trace_android_vh_binder_preset(line_binder_preset, NULL);
-	unregister_trace_android_vh_binder_reply(line_binder_reply, NULL);
-	unregister_trace_android_vh_binder_trans(line_binder_transaction, NULL);
+	if (re_binder_hook_trans) {
+		unregister_trace_android_vh_binder_trans(line_binder_transaction, NULL);
+		re_binder_hook_trans = false;
+	}
+	if (re_binder_hook_reply) {
+		unregister_trace_android_vh_binder_reply(line_binder_reply, NULL);
+		re_binder_hook_reply = false;
+	}
+	if (re_binder_hook_preset) {
+		unregister_trace_android_vh_binder_preset(line_binder_preset, NULL);
+		re_binder_hook_preset = false;
+	}
+	if (re_binder_hook_alloc_buf) {
+		unregister_trace_android_vh_binder_alloc_new_buf_locked(line_binder_alloc_new_buf_locked, NULL);
+		re_binder_hook_alloc_buf = false;
+	}
 }

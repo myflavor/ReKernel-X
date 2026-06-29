@@ -185,7 +185,7 @@ void unregister_signal(void);
 int register_netfilter(void);
 void unregister_netfilter(void);
 
-int register_kp(void);
-void unregister_kp(void);
+void register_binder_kp(void);
+void unregister_binder_kp(void);
 
 #endif

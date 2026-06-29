@@ -176,7 +176,9 @@ static struct nf_hook_ops rekernel_x_nf_ops[] = {
 #endif
 };
 
-void unregister_netfilter(void)
+static bool re_netfilter_registered;
+
+static void __unregister_netfilter(void)
 {
 	struct net *net;
 
@@ -187,6 +189,14 @@ void unregister_netfilter(void)
 	rtnl_unlock();
 
 	net_uid_destroy();
+}
+
+void unregister_netfilter(void)
+{
+	if (re_netfilter_registered) {
+		re_netfilter_registered = false;
+		__unregister_netfilter();
+	}
 }
 
 int register_netfilter(void)
@@ -207,9 +217,10 @@ int register_netfilter(void)
 	rtnl_unlock();
 
 	if (rc != LINE_SUCCESS) {
-		unregister_netfilter();
+		__unregister_netfilter();
 		return LINE_ERROR;
 	}
 
+	re_netfilter_registered = true;
 	return LINE_SUCCESS;
 }
