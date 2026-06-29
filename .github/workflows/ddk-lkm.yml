@@ -1,4 +1,4 @@
-name: Build ReKernel-X LKM
+name: Build ReKernel-X LKM Target
 
 on:
   workflow_call:
