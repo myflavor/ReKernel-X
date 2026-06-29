@@ -29,15 +29,23 @@ struct uid_info {
 
 static DEFINE_MUTEX(rekernel_x_net_uid_mutex);
 
-bool net_uid_monitored(uid_t uid)
+/*
+ * Test whether a uid is being monitored. Caller MUST hold rcu_read_lock();
+ * the _rcu suffix encodes that contract. Writers (net_uid_add/del) must NOT
+ * reuse this — they hold the mutex and iterate with the non-rcu variant.
+ */
+bool net_uid_monitored_rcu(uid_t uid)
 {
 	struct uid_info *entry;
+	bool found = false;
 
 	hash_for_each_possible_rcu(rekernel_x_net_uid_map, entry, hnode, uid) {
-		if (entry->uid == uid)
-			return true;
+		if (entry->uid == uid) {
+			found = true;
+			break;
+		}
 	}
-	return false;
+	return found;
 }
 
 /* add a uid to the monitor map (no-op if already present). Caller must NOT hold the mutex. */

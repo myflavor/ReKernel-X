@@ -166,7 +166,7 @@ int register_genl(void);
 void unregister_genl(void);
 
 /* net_uid.c — network-monitor uid hashmap */
-bool net_uid_monitored(uid_t uid);
+bool net_uid_monitored_rcu(uid_t uid);
 void net_uid_add(uid_t uid);
 void net_uid_del(uid_t uid);
 void net_uid_init(void);

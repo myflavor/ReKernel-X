@@ -122,7 +122,7 @@ static unsigned int rekernel_x_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
 		return NF_ACCEPT;
 
 	rcu_read_lock();
-	if (!net_uid_monitored(uid)) {
+	if (!net_uid_monitored_rcu(uid)) {
 		rcu_read_unlock();
 		return NF_ACCEPT;
 	}
