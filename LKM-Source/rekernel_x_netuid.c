@@ -29,11 +29,6 @@ struct uid_info {
 
 static DEFINE_MUTEX(rekernel_x_net_uid_mutex);
 
-/*
- * Test whether a uid is being monitored. Caller MUST hold rcu_read_lock();
- * the _rcu suffix encodes that contract. Writers (net_uid_add/del) must NOT
- * reuse this — they hold the mutex and iterate with the non-rcu variant.
- */
 bool net_uid_monitored_rcu(uid_t uid)
 {
 	struct uid_info *entry;
