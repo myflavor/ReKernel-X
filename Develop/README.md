@@ -47,9 +47,9 @@ import cn.myflv.kernel.ReKernelXCallback;
 
 boolean ok = ReKernelX.startListening(new ReKernelXCallback() {
     @Override public void disconnected() { /* unexpected drop; not fired on stopListening() */ }
-    @Override public void binder(int binderType, int oneway, int from, int fromPid, int target, int targetPid, String rpc, int code) {}
-    @Override public void signal(int signal, int killer, int killerPid, int dst, int dstPid) {}
-    @Override public void network(int proto, int target, int dataLen) {}
+    @Override public void binder(int binderType, int oneway, int fromUid, int fromPid, int targetUid, int targetPid, String rpc, int code) {}
+    @Override public void signal(int signal, int killerUid, int killerPid, int dstUid, int dstPid) {}
+    @Override public void network(int proto, int targetUid, int dataLen) {}
 });
 if (ok) ReKernelX.addMonitorNet(uid);
 // ...
