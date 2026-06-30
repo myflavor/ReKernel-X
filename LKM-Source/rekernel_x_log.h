@@ -2,7 +2,7 @@
 #define REKERNEL_X_LOG_H
 
 /* Include this header FIRST in each .c — pr_fmt must be defined before printk.h. */
-#define pr_fmt(fmt) "[ReKernel-X LKM] " fmt
+#define pr_fmt(fmt) "[ReKernel-X] " fmt
 #include <linux/printk.h>
 
 #define rekernel_x_info_log(fmt, ...)  pr_info(fmt, ##__VA_ARGS__)
