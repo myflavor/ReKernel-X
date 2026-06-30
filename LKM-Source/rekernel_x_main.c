@@ -17,7 +17,7 @@ static int __init start_rekernel(void)
 {
 	rekernel_x_info_log("starting...\n");
 	rekernel_x_debug_log("Debug mode is enabled!\n");
-	rekernel_x_info_log("Version %s | Fork by myflavor | Upstream: Sakion Team\n", REKERNEL_X_VERSION);
+	rekernel_x_info_log("Version %s |  by myflavor, Sakion Team\n", REKERNEL_X_VERSION);
 
 	if (register_genl() != LINE_SUCCESS) {
 		rekernel_x_err_log("%s: Failed to register genl family!\n", __func__);
