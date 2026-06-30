@@ -19,7 +19,8 @@ packaged as an **AAR** so app developers don't have to speak raw netlink.
 | Path | Purpose |
 |---|---|
 | `aar/` | Android AAR project — the client library |
-| `aar/rekernel_x/src/main/cpp/rekernel_jni.cpp` | C++ netlink client + JNI bridge |
+| `aar/rekernel_x/src/main/cpp/rekernel_x_jni.cpp` | C++ netlink client + JNI bridge |
+| `aar/rekernel_x/src/main/cpp/rekernel_x_nla.h` | NLA read/write helpers (shared) |
 | `aar/rekernel_x/src/main/java/cn/myflv/kernel/` | Java API (`ReKernelX`, `ReKernelXCallback`) |
 | `aar/README.md` | Build instructions + full usage example |
 
@@ -29,15 +30,15 @@ notes, and a complete Java usage snippet.
 ## Protocol overview
 
 The client resolves the `"rekernel_x"` genl family by name via
-`CTRL_CMD_GETFAMILY`, joins the `"events"` multicast group, and receives binary
-`struct rekernel_x_event` messages — a tagged union read by fixed offset, **not**
-a formatted string. It sends `MONITOR_NET` / `DEL_MONITOR_NET` commands carrying
-a uid to be monitored.
+`CTRL_CMD_GETFAMILY`, joins the `"events"` multicast group, and receives events
+serialised as **nested Netlink attributes** (NLA) — not a flat struct or a
+formatted string. It sends `ADD_MONITOR_NET` / `DEL_MONITOR_NET` commands
+carrying a uid to be monitored.
 
-The on-wire ABI is defined in [`../LKM-Source/rekernel_x.h`](../LKM-Source/rekernel_x.h)
-and mirrored byte-for-byte in the JNI source. `static_assert(sizeof(rekernel_x_event) == 172)`
-catches drift at compile time. **If the kernel ABI changes, update both
-`rekernel_x.h` and `rekernel_jni.cpp` together.**
+The on-wire ABI (attribute IDs, genl commands, event types) is defined in
+[`../LKM-Source/rekernel_x.h`](../LKM-Source/rekernel_x.h) and mirrored in the
+JNI source. **If the kernel ABI changes, update both `rekernel_x.h` and
+`rekernel_x_jni.cpp` together.**
 
 ## Quick start
 
@@ -45,15 +46,38 @@ catches drift at compile time. **If the kernel ABI changes, update both
 import cn.myflv.kernel.ReKernelX;
 import cn.myflv.kernel.ReKernelXCallback;
 
-boolean ok = ReKernelX.startListening(new ReKernelXCallback() {
-    @Override public void disconnected() { /* unexpected drop; not fired on stopListening() */ }
-    @Override public void binder(int binderType, int oneway, int fromUid, int fromPid, int targetUid, int targetPid, String rpc, int code) {}
-    @Override public void signal(int signal, int killerUid, int killerPid, int dstUid, int dstPid) {}
-    @Override public void network(int proto, int targetUid, int dataLen) {}
-});
-if (ok) ReKernelX.addMonitorNet(uid);
-// ...
-ReKernelX.stopListening();
+new Thread(() -> {
+
+    if (ReKernelX.connect()) {
+
+        Log.i("ReKernelX", "connected");
+
+        ReKernelX.setCallback(new ReKernelXCallback() {
+            @Override
+            public void binder(int binderType, int oneway, int fromUid, int fromPid, int targetUid, int targetPid, String rpcName, int code) {
+            }
+
+            @Override
+            public void signal(int signal, int killerUid, int killerPid, int dstUid, int dstPid) {
+            }
+
+            @Override
+            public void network(int proto, int targetUid, int dataLen) {
+            }
+        });
+
+        ReKernelX.pollEvent();
+
+        Log.i("ReKernelX", "disconnected");
+
+    }
+
+
+}).start();
+
+ReKernelX.addMonitorNet(1000);
+
+ReKernelX.delMonitorNet(1000);
 ```
 
 Requirements: a rooted device with the ReKernel-X kernel module loaded
