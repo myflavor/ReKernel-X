@@ -53,23 +53,32 @@ Constraints:
 import cn.myflv.kernel.ReKernelX;
 import cn.myflv.kernel.ReKernelXCallback;
 
+import static cn.myflv.kernel.ReKernelXCallback.*;
+
 new Thread(() -> {
 
     if (ReKernelX.connect()) {
+
 
         Log.i("ReKernelX", "connected");
 
         ReKernelX.setCallback(new ReKernelXCallback() {
             @Override
             public void binder(int binderType, int oneway, int fromUid, int fromPid, int targetUid, int targetPid, String rpcName, int code) {
+                Log.i("ReKernelX", String.format("transaction = %s", binderType == BINDER_TRANSACTION));
+                Log.i("ReKernelX", String.format("replay = %s", binderType == BINDER_REPLY));
+                Log.i("ReKernelX", String.format("freeBufferFull = %s", binderType == BINDER_FREE_BUFFER_FULL));
             }
 
             @Override
             public void signal(int signal, int killerUid, int killerPid, int dstUid, int dstPid) {
+
             }
 
             @Override
             public void network(int proto, int targetUid, int dataLen) {
+                Log.i("ReKernelX", String.format("ipv4 = %s", proto == PROTO_IPV4));
+                Log.i("ReKernelX", String.format("ipv6 = %s", proto == PROTO_IPV6));
             }
         });
 
@@ -85,6 +94,8 @@ new Thread(() -> {
 ReKernelX.addMonitorNet(1000);
 
 ReKernelX.delMonitorNet(1000);
+
+ReKernelX.disconnect();
 ```
 
 ## ProGuard / R8
