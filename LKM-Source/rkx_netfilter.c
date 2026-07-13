@@ -1,14 +1,11 @@
 /*
- * Copyright (c) Sakion Team. All rights reserved.
- * Copyright (c) myflavor <admin@myflv.cn>.
- *
- * File name: rekernel_x_netfilter.c
- * Description: ReKernel-X netfilter hook — measures inbound TCP payload for
- *              monitored user-app uids (IPv4/IPv6).
- * Author: nep_timeline@outlook.com, myflavor <admin@myflv.cn>
+ * Copyright (c) 2026 myflavor <admin@myflv.cn>. All rights reserved.
+ * Based on Re-Kernel project by nep_timeline@outlook.com.
+ * File: rkx_netfilter.c — Netfilter hooks & traffic metrics per UID.
  */
-#include "rekernel_x_log.h"
-#include "rekernel_x.h"
+
+#include "rkx_log.h"
+#include "rkx.h"
 #include <linux/printk.h>
 #include <linux/module.h>
 #include <linux/skbuff.h>
@@ -62,7 +59,7 @@ static int parse_tcp_ipv4(struct sk_buff *skb, __u8 *proto, int *data_len)
 	if (*data_len <= 0 && !th->syn && !th->fin && !th->rst)
 		return -1;
 
-	*proto = REKERNEL_X_NET_PROTO_IPV4;
+	*proto = RKX_NET_PROTO_IPV4;
 	return 0;
 }
 
@@ -95,12 +92,12 @@ static int parse_tcp_ipv6(struct sk_buff *skb, __u8 *proto, int *data_len)
 	if (*data_len <= 0 && !th->syn && !th->fin && !th->rst)
 		return -1;
 
-	*proto = REKERNEL_X_NET_PROTO_IPV6;
+	*proto = RKX_NET_PROTO_IPV6;
 	return 0;
 }
 #endif
 
-static unsigned int rekernel_x_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
+static unsigned int rkx_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
 	const struct nf_hook_state *state)
 {
 	struct sock *sk;
@@ -141,10 +138,10 @@ static unsigned int rekernel_x_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
 		return NF_ACCEPT;
 	}
 
-	rekernel_x_debug_log("Receive net data! target=%d\n", uid);
-	if (rekernel_x_netlink_ready()) {
-		struct rekernel_x_event event = {
-			.type = REKERNEL_X_EVT_NETWORK,
+	rkx_log_debug("Receive net data! target=%d\n", uid);
+	if (rkx_netlink_ready()) {
+		struct rkx_event event = {
+			.type = RKX_EVT_NETWORK,
 			.u.network = {
 				.proto = proto,
 				.target_uid = uid,
@@ -158,16 +155,16 @@ static unsigned int rekernel_x_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
 }
 
 /* Only monitor input network packages */
-static struct nf_hook_ops rekernel_x_nf_ops[] = {
+static struct nf_hook_ops rkx_nf_ops[] = {
 	{
-		.hook     = rekernel_x_pkg_ipv4_ipv6_in,
+		.hook     = rkx_pkg_ipv4_ipv6_in,
 		.pf       = NFPROTO_IPV4,
 		.hooknum  = NF_INET_LOCAL_IN,
 		.priority = NF_IP_PRI_SELINUX_LAST + 1,
 	},
 #if IS_ENABLED(CONFIG_IPV6)
 	{
-		.hook     = rekernel_x_pkg_ipv4_ipv6_in,
+		.hook     = rkx_pkg_ipv4_ipv6_in,
 		.pf       = NFPROTO_IPV6,
 		.hooknum  = NF_INET_LOCAL_IN,
 		.priority = NF_IP6_PRI_SELINUX_LAST + 1,
@@ -183,11 +180,9 @@ static void __unregister_netfilter(void)
 
 	rtnl_lock();
 	for_each_net(net) {
-		nf_unregister_net_hooks(net, rekernel_x_nf_ops, ARRAY_SIZE(rekernel_x_nf_ops));
+		nf_unregister_net_hooks(net, rkx_nf_ops, ARRAY_SIZE(rkx_nf_ops));
 	}
 	rtnl_unlock();
-
-	net_uid_destroy();
 }
 
 void unregister_netfilter(void)
@@ -203,13 +198,11 @@ int register_netfilter(void)
 	int rc = LINE_SUCCESS;
 	struct net *net = NULL;
 
-	net_uid_init();
-
 	rtnl_lock();
 	for_each_net(net) {
-		rc = nf_register_net_hooks(net, rekernel_x_nf_ops, ARRAY_SIZE(rekernel_x_nf_ops));
+		rc = nf_register_net_hooks(net, rkx_nf_ops, ARRAY_SIZE(rkx_nf_ops));
 		if (rc != LINE_SUCCESS) {
-			rekernel_x_err_log("register netfilter hooks failed, rc=%d\n", rc);
+			rkx_log_err("register netfilter hooks failed, rc=%d\n", rc);
 			break;
 		}
 	}

@@ -1,15 +1,11 @@
 /*
- * Copyright (c) Sakion Team. All rights reserved.
- * Copyright (c) myflavor <admin@myflv.cn>.
- *
- * File name: rekernel_x_binder_kp.c
- * Description: ReKernel-X binder hooks via kprobe — resolves internal binder
- *              symbols via kallsyms and intercepts binder_proc_transaction to
- *              drop outdated async transactions for frozen tasks.
- * Author: nep_timeline@outlook.com, myflavor <admin@myflv.cn>
+ * Copyright (c) 2026 myflavor <admin@myflv.cn>. All rights reserved.
+ * Based on Re-Kernel project by nep_timeline@outlook.com.
+ * File: rkx_binder_kp.c — Kprobe hooks for Binder transaction filtering.
  */
-#include "rekernel_x_log.h"
-#include "rekernel_x.h"
+
+#include "rkx_log.h"
+#include "rkx.h"
 #include <linux/printk.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -17,7 +13,7 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/kprobes.h>
-#include <../android/binder_internal.h>
+#include "../android/binder_internal.h"
 
 static unsigned long (*re_kallsyms_lookup_name)(const char* name);
 static void (*re_binder_transaction_buffer_release)(struct binder_proc* proc, struct binder_thread* thread, struct binder_buffer* buffer, binder_size_t off_end_offset, bool is_failure);
@@ -127,7 +123,7 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 
 		if (t_outdated) {
 			struct binder_buffer* buffer = t_outdated->buffer;
-			rekernel_x_debug_log("free_outdated txn %d supersedes %d\n", t->debug_id, t_outdated->debug_id);
+			rkx_log_debug("free_outdated txn %d supersedes %d\n", t->debug_id, t_outdated->debug_id);
 			t_outdated->buffer = NULL;
 			buffer->transaction = NULL;
 			binder_release_entire_buffer(proc, NULL, buffer, false);
@@ -154,7 +150,7 @@ void __nocfi register_binder_kp(void) {
 
 	rc = register_kprobe(&kp_kallsyms_lookup_name);
 	if (rc != LINE_SUCCESS) {
-		rekernel_x_err_log("register kallsyms_lookup_name kprobe failed, rc=%d (binder async-cleanup disabled)\n", rc);
+		rkx_log_err("register kallsyms_lookup_name kprobe failed, rc=%d (binder async-cleanup disabled)\n", rc);
 		return;
 	}
 	re_kallsyms_lookup_name = (void*)kp_kallsyms_lookup_name.addr;
@@ -165,13 +161,13 @@ void __nocfi register_binder_kp(void) {
 	re_binder_stats = (void*)re_kallsyms_lookup_name("binder_stats");
 
 	if (re_binder_transaction_buffer_release == NULL || re_binder_alloc_free_buf == NULL || re_binder_stats == NULL) {
-		rekernel_x_err_log("resolve binder symbols failed (binder async-cleanup disabled)\n");
+		rkx_log_err("resolve binder symbols failed (binder async-cleanup disabled)\n");
 		return;
 	}
 
 	rc = register_kprobe(&kp_binder_proc_transaction);
 	if (rc != LINE_SUCCESS) {
-		rekernel_x_err_log("register binder_proc_transaction kprobe failed, rc=%d (binder async-cleanup disabled)\n", rc);
+		rkx_log_err("register binder_proc_transaction kprobe failed, rc=%d (binder async-cleanup disabled)\n", rc);
 		return;
 	}
 	re_kp_binder_proc_registered = true;

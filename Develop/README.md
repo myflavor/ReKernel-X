@@ -1,60 +1,55 @@
 # Develop
 
-Userspace integration layer for [ReKernel-X](https://github.com/Sakion-Team/ReKernel-X).
+ReKernel-X 用户态客户端，封装为 Android AAR
 
-ReKernel-X exposes a **Generic Netlink** server in the kernel module. Userspace
-tombstone / crash-capture apps connect to it to receive binder, signal, and
-network events that the kernel hooks. This folder ships the Android client
-packaged as an **AAR** so app developers don't have to speak raw netlink.
+提供 Java + JNI 封装，接入时无需手写 netlink
 
+## 构建
+
+需要 JDK 17、Android SDK（`platforms;android-34`、`build-tools;34.0.0`、`ndk;27.0.12077973`、`cmake;3.22.1`）
+
+```bash
+export JAVA_HOME=/path/to/jdk17
+export ANDROID_HOME=/path/to/Android/Sdk
+./gradlew :rekernel_x:assembleRelease
 ```
-┌──────────────┐   genl "rekernel_x" family   ┌──────────────────┐
-│  Your App    │ ──── REKERNEL_A_UID cmd ──▶│  ReKernel-X LKM   │
-│  (Java + JNI)│ ◀── events mcast group ───│  (LKM-Source/)   │
-└──────────────┘                            └──────────────────┘
-```
 
-## Contents
+输出：`rekernel_x/build/outputs/aar/rekernel_x-release.aar`
 
-| Path | Purpose |
-|---|---|
-| `aar/` | Android AAR project — the client library |
-| `aar/rekernel_x/src/main/cpp/rekernel_jni.cpp` | C++ netlink client + JNI bridge |
-| `aar/rekernel_x/src/main/java/cn/myflv/kernel/` | Java API (`ReKernelX`, `ReKernelXCallback`) |
-| `aar/README.md` | Build instructions + full usage example |
+## 接入示例
 
-See [`aar/README.md`](aar/README.md) for build prerequisites, ABI-compatibility
-notes, and a complete Java usage snippet.
-
-## Protocol overview
-
-The client resolves the `"rekernel_x"` genl family by name via
-`CTRL_CMD_GETFAMILY`, joins the `"events"` multicast group, and receives binary
-`struct rekernel_x_event` messages — a tagged union read by fixed offset, **not**
-a formatted string. It sends `MONITOR_NET` / `DEL_MONITOR_NET` commands carrying
-a uid to be monitored.
-
-The on-wire ABI is defined in [`../LKM-Source/rekernel_x.h`](../LKM-Source/rekernel_x.h)
-and mirrored byte-for-byte in the JNI source. `static_assert(sizeof(rekernel_x_event) == 172)`
-catches drift at compile time. **If the kernel ABI changes, update both
-`rekernel_x.h` and `rekernel_jni.cpp` together.**
-
-## Quick start
+引入 [GitHub Releases](https://github.com/myflavor/ReKernel-X/releases) 下载的 AAR，或自行编译的 AAR
 
 ```java
 import cn.myflv.kernel.ReKernelX;
 import cn.myflv.kernel.ReKernelXCallback;
 
-boolean ok = ReKernelX.startListening(new ReKernelXCallback() {
-    @Override public void disconnected() { /* unexpected drop; not fired on stopListening() */ }
-    @Override public void binder(int binderType, int oneway, int fromUid, int fromPid, int targetUid, int targetPid, String rpc, int code) {}
-    @Override public void signal(int signal, int killerUid, int killerPid, int dstUid, int dstPid) {}
-    @Override public void network(int proto, int targetUid, int dataLen) {}
-});
-if (ok) ReKernelX.addMonitorNet(uid);
-// ...
-ReKernelX.stopListening();
-```
+import static cn.myflv.kernel.ReKernelXCallback.*;
 
-Requirements: a rooted device with the ReKernel-X kernel module loaded
-(kernel ≥ 5.10; see the root README).
+new Thread(() -> {
+    if (ReKernelX.connect()) {
+        ReKernelX.setCallback(new ReKernelXCallback() {
+            @Override
+            public void binder(int binderType, int oneway, int fromUid, int fromPid,
+                               int targetUid, int targetPid, String rpcName, int code) {
+                // BINDER_TRANSACTION / BINDER_REPLY / BINDER_FREE_BUFFER_FULL
+            }
+
+            @Override
+            public void signal(int signal, int killerUid, int killerPid, int dstUid, int dstPid) {
+            }
+
+            @Override
+            public void network(int proto, int targetUid, int dataLen) {
+                // PROTO_IPV4 / PROTO_IPV6
+            }
+        });
+
+        ReKernelX.pollEvent(); // 阻塞，直到 disconnect
+    }
+}).start();
+
+ReKernelX.addMonitorNet(1000);
+ReKernelX.delMonitorNet(1000);
+ReKernelX.disconnect(); // 必须在 pollEvent 以外的线程调用
+```
