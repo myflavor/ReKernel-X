@@ -6,21 +6,26 @@
  *              alloc/preset/reply/transaction emit events when a frozen target
  *              is about to be woken; a live kprobe on binder_proc_transaction
  *              (CLEAN_UP_ASYNC_BINDER) frees superseded outdated async
- *              transactions. Non-exported binder symbols are resolved via a
- *              transient kprobe on kallsyms_lookup_name.
+ *              transactions when identity and pure-data payload match.
+ *              Non-exported binder symbols are resolved via a transient
+ *              kprobe on kallsyms_lookup_name; Linux < 6.0 uses a local
+ *              binder buffer copy helper instead of binder_alloc_copy_from_buffer.
  */
 #include <linux/version.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/kprobes.h>
+#include <linux/string.h>
 #include <trace/hooks/binder.h>
 #include <../android/binder_internal.h>
 #include "rekernel_internal.h"
+#include "rekernel_binder_alloc.h"
 
 static unsigned long (*re_kallsyms_lookup_name)(const char* name);
 static void (*re_kernel_transaction_buffer_release)(struct binder_proc* proc, struct binder_thread* thread, struct binder_buffer* buffer, binder_size_t off_end_offset, bool is_failure);
 static void (*re_kernel_alloc_free_buf)(struct binder_alloc* alloc, struct binder_buffer* buffer);
+static int (*re_kernel_alloc_copy_from_buffer)(struct binder_alloc* alloc, void* dest, struct binder_buffer* buffer, binder_size_t buffer_offset, size_t bytes);
 static struct binder_stats(*re_kernel_stats);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
@@ -202,6 +207,38 @@ __releases(&node->lock)
 	spin_unlock(&node->lock);
 }
 
+/* Compare pure-data binder buffer payload for free-first matching. */
+static bool binder_buffer_data_equal(struct binder_proc* proc,
+	struct binder_buffer* b1, struct binder_buffer* b2)
+{
+	size_t pos, chunk, total;
+	u8 c1[64];
+	u8 c2[64];
+
+	if (!proc || !b1 || !b2 || !re_kernel_alloc_copy_from_buffer)
+		return false;
+	if (b1->data_size != b2->data_size)
+		return false;
+	if (b1->offsets_size != 0 || b2->offsets_size != 0)
+		return false;
+
+	total = b1->data_size;
+	pos = 0;
+	while (pos < total) {
+		chunk = total - pos;
+		if (chunk > sizeof(c1))
+			chunk = sizeof(c1);
+		if (re_kernel_alloc_copy_from_buffer(&proc->alloc, c1, b1, pos, chunk))
+			return false;
+		if (re_kernel_alloc_copy_from_buffer(&proc->alloc, c2, b2, pos, chunk))
+			return false;
+		if (memcmp(c1, c2, chunk))
+			return false;
+		pos += chunk;
+	}
+	return true;
+}
+
 static bool binder_can_update_transaction(struct binder_transaction* t1, struct binder_transaction* t2)
 {
 	if ((t1->flags & t2->flags & TF_ONE_WAY) != TF_ONE_WAY || !t1->to_proc || !t2->to_proc)
@@ -210,7 +247,7 @@ static bool binder_can_update_transaction(struct binder_transaction* t1, struct 
 		t1->flags == t2->flags && t1->buffer->pid == t2->buffer->pid &&
 		t1->buffer->target_node->ptr == t2->buffer->target_node->ptr &&
 		t1->buffer->target_node->cookie == t2->buffer->target_node->cookie)
-		return true;
+		return binder_buffer_data_equal(t1->to_proc, t1->buffer, t2->buffer);
 	return false;
 }
 
@@ -351,8 +388,14 @@ int __nocfi register_kp(void) {
 	re_kernel_transaction_buffer_release = (void*)re_kallsyms_lookup_name("binder_transaction_buffer_release");
 	re_kernel_alloc_free_buf = (void*)re_kallsyms_lookup_name("binder_alloc_free_buf");
 	re_kernel_stats = (void*)re_kallsyms_lookup_name("binder_stats");
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+	re_kernel_alloc_copy_from_buffer = rekernel_binder_copy_from_buffer;
+#else
+	re_kernel_alloc_copy_from_buffer = (void*)re_kallsyms_lookup_name("binder_alloc_copy_from_buffer");
+#endif
 
-	if (re_kernel_transaction_buffer_release == NULL || re_kernel_alloc_free_buf == NULL || re_kernel_stats == NULL) {
+	if (re_kernel_transaction_buffer_release == NULL || re_kernel_alloc_free_buf == NULL ||
+	    re_kernel_alloc_copy_from_buffer == NULL || re_kernel_stats == NULL) {
 		rc = -EINVAL;
 		pr_err("register kprobe kallsyms_lookup_name failed, rc=%d\n", rc);
 		return rc;
