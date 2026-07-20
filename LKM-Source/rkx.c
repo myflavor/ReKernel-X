@@ -45,9 +45,7 @@ static int __init start_rekernel(void)
 		goto err;
 	}
 
-#ifdef CLEAN_UP_ASYNC_BINDER
 	register_binder_kp();
-#endif
 
 	rkx_log_info("hooked!\n");
 	return LINE_SUCCESS;
