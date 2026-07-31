@@ -6,6 +6,7 @@
 
 #include "rkx_log.h"
 #include "rkx.h"
+#include "rkx_binder_alloc.h"
 #include <linux/printk.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -13,11 +14,14 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/kprobes.h>
+#include <linux/string.h>
+#include <linux/version.h>
 #include "../android/binder_internal.h"
 
 static unsigned long (*re_kallsyms_lookup_name)(const char* name);
 static void (*re_binder_transaction_buffer_release)(struct binder_proc* proc, struct binder_thread* thread, struct binder_buffer* buffer, binder_size_t off_end_offset, bool is_failure);
 static void (*re_binder_alloc_free_buf)(struct binder_alloc* alloc, struct binder_buffer* buffer);
+static int (*re_binder_alloc_copy_from_buffer)(struct binder_alloc* alloc, void* dest, struct binder_buffer* buffer, binder_size_t buffer_offset, size_t bytes);
 static struct binder_stats(*re_binder_stats);
 
 static inline void binder_inner_proc_lock(struct binder_proc* proc)
@@ -44,6 +48,37 @@ __releases(&node->lock)
 	spin_unlock(&node->lock);
 }
 
+static bool binder_buffer_data_equal(struct binder_proc* proc,
+	struct binder_buffer* b1, struct binder_buffer* b2)
+{
+	size_t pos, chunk, total;
+	u8 c1[64];
+	u8 c2[64];
+
+	if (!proc || !b1 || !b2 || !re_binder_alloc_copy_from_buffer)
+		return false;
+	if (b1->data_size != b2->data_size)
+		return false;
+	if (b1->offsets_size != 0 || b2->offsets_size != 0)
+		return false;
+
+	total = b1->data_size;
+	pos = 0;
+	while (pos < total) {
+		chunk = total - pos;
+		if (chunk > sizeof(c1))
+			chunk = sizeof(c1);
+		if (re_binder_alloc_copy_from_buffer(&proc->alloc, c1, b1, pos, chunk))
+			return false;
+		if (re_binder_alloc_copy_from_buffer(&proc->alloc, c2, b2, pos, chunk))
+			return false;
+		if (memcmp(c1, c2, chunk))
+			return false;
+		pos += chunk;
+	}
+	return true;
+}
+
 static bool binder_can_update_transaction(struct binder_transaction* t1, struct binder_transaction* t2)
 {
 	if ((t1->flags & t2->flags & TF_ONE_WAY) != TF_ONE_WAY || !t1->to_proc || !t2->to_proc)
@@ -52,7 +87,7 @@ static bool binder_can_update_transaction(struct binder_transaction* t1, struct 
 		t1->flags == t2->flags && t1->buffer->pid == t2->buffer->pid &&
 		t1->buffer->target_node->ptr == t2->buffer->target_node->ptr &&
 		t1->buffer->target_node->cookie == t2->buffer->target_node->cookie)
-		return true;
+		return binder_buffer_data_equal(t1->to_proc, t1->buffer, t2->buffer);
 	return false;
 }
 
@@ -60,7 +95,6 @@ static struct binder_transaction* binder_find_outdated_transaction_ilocked(struc
 	struct list_head* target_list)
 {
 	struct binder_work* w;
-	bool second = false;
 
 	list_for_each_entry(w, target_list, entry) {
 		struct binder_transaction* t_queued;
@@ -68,12 +102,8 @@ static struct binder_transaction* binder_find_outdated_transaction_ilocked(struc
 		if (w->type != BINDER_WORK_TRANSACTION)
 			continue;
 		t_queued = container_of(w, struct binder_transaction, work);
-		if (binder_can_update_transaction(t_queued, t)) {
-			if (second)
-				return t_queued;
-			else
-				second = true;
-		}
+		if (binder_can_update_transaction(t_queued, t))
+			return t_queued;
 	}
 	return NULL;
 }
@@ -123,7 +153,8 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 
 		if (t_outdated) {
 			struct binder_buffer* buffer = t_outdated->buffer;
-			rkx_log_debug("free_outdated txn %d supersedes %d\n", t->debug_id, t_outdated->debug_id);
+			rkx_log_debug("free_outdated uid=%u debug_id=%d data_size=%zu\n",
+				task_uid(proc->tsk).val, t_outdated->debug_id, buffer->data_size);
 			t_outdated->buffer = NULL;
 			buffer->transaction = NULL;
 			binder_release_entire_buffer(proc, NULL, buffer, false);
@@ -158,9 +189,15 @@ void __nocfi register_binder_kp(void) {
 
 	re_binder_transaction_buffer_release = (void*)re_kallsyms_lookup_name("binder_transaction_buffer_release");
 	re_binder_alloc_free_buf = (void*)re_kallsyms_lookup_name("binder_alloc_free_buf");
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+	re_binder_alloc_copy_from_buffer = rkx_binder_copy_from_buffer;
+#else
+	re_binder_alloc_copy_from_buffer = (void *)re_kallsyms_lookup_name("binder_alloc_copy_from_buffer");
+#endif
 	re_binder_stats = (void*)re_kallsyms_lookup_name("binder_stats");
 
-	if (re_binder_transaction_buffer_release == NULL || re_binder_alloc_free_buf == NULL || re_binder_stats == NULL) {
+	if (re_binder_transaction_buffer_release == NULL || re_binder_alloc_free_buf == NULL ||
+	    re_binder_alloc_copy_from_buffer == NULL || re_binder_stats == NULL) {
 		rkx_log_err("resolve binder symbols failed (binder async-cleanup disabled)\n");
 		return;
 	}

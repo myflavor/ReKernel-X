@@ -34,7 +34,7 @@ static int rkx_genl_monitor_net(struct sk_buff *skb, struct genl_info *info)
 
     muid = (uid_t)nla_get_u32(info->attrs[RKX_A_UID]);
     rkx_log_debug("addMonitorUid uid=%d\n", muid);
-    net_uid_add(muid);
+    add_net_uid(muid);
     return 0;
 }
 
@@ -49,7 +49,7 @@ static int rkx_genl_del_monitor_net(struct sk_buff *skb, struct genl_info *info)
 
     muid = (uid_t)nla_get_u32(info->attrs[RKX_A_UID]);
     rkx_log_debug("delMonitorNet uid=%d\n", muid);
-    net_uid_del(muid);
+    del_net_uid(muid);
     return 0;
 }
 

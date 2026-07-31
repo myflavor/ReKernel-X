@@ -17,7 +17,7 @@ static int __init start_rekernel(void)
 	rkx_log_debug("Debug mode is enabled!\n");
 	rkx_log_info("Version %s |  by myflavor, Sakion Team\n", RKX_VERSION);
 
-	net_uid_init();
+	init_net_uid();
 
 	if (register_genl() != LINE_SUCCESS)
 	{
@@ -45,9 +45,7 @@ static int __init start_rekernel(void)
 		goto err;
 	}
 
-#ifdef CLEAN_UP_ASYNC_BINDER
 	register_binder_kp();
-#endif
 
 	rkx_log_info("hooked!\n");
 	return LINE_SUCCESS;
@@ -59,7 +57,7 @@ err:
 	unregister_binder();
 	tracepoint_synchronize_unregister();
 	unregister_genl();
-	net_uid_destroy();
+	destroy_net_uid();
 	return LINE_ERROR;
 }
 
@@ -72,7 +70,7 @@ static void __exit exit_rekernel(void)
 	unregister_binder();
 	tracepoint_synchronize_unregister();
 	unregister_genl();
-	net_uid_destroy();
+	destroy_net_uid();
 }
 
 module_init(start_rekernel);

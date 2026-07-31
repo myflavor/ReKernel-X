@@ -144,10 +144,10 @@ void unregister_genl(void);
 
 // net_uid.c
 bool net_uid_monitored_rcu(uid_t uid);
-void net_uid_add(uid_t uid);
-void net_uid_del(uid_t uid);
-void net_uid_init(void);
-void net_uid_destroy(void);
+void add_net_uid(uid_t uid);
+void del_net_uid(uid_t uid);
+void init_net_uid(void);
+void destroy_net_uid(void);
 
 // frozen.c
 bool line_is_frozen(struct task_struct *task);
