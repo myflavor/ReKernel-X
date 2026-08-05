@@ -18,6 +18,7 @@ static int __init start_rekernel(void)
 	rkx_log_info("Version %s |  by myflavor, Sakion Team\n", RKX_VERSION);
 
 	init_net_uid();
+	init_free_async();
 
 	if (register_genl() != LINE_SUCCESS)
 	{
@@ -57,6 +58,7 @@ err:
 	unregister_binder();
 	tracepoint_synchronize_unregister();
 	unregister_genl();
+	destroy_free_async();
 	destroy_net_uid();
 	return LINE_ERROR;
 }
@@ -70,6 +72,7 @@ static void __exit exit_rekernel(void)
 	unregister_binder();
 	tracepoint_synchronize_unregister();
 	unregister_genl();
+	destroy_free_async();
 	destroy_net_uid();
 }
 

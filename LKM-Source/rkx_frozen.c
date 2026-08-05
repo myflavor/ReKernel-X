@@ -37,9 +37,8 @@ bool line_is_frozen(struct task_struct *task)
 	if (cgroup_task_frozen(task) || rkx_is_jobctl_frozen_compatible(task))
 		return true;
 
-	/* if task->group_leader is NULL, unfreeze it to avoid some unknown problems */
 	if (NULL == task->group_leader)
-		return true;
+		return false;
 
 	return rkx_is_frozen_state_compatible(task->group_leader) || freezing(task->group_leader);
 }

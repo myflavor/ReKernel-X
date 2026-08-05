@@ -28,6 +28,8 @@ import static cn.myflv.kernel.ReKernelXCallback.*;
 
 new Thread(() -> {
     if (ReKernelX.connect()) {
+        ReKernelX.addMonitorNet(1000);
+        ReKernelX.addFreeAsync("android.os.IMessenger", -1, ReKernelX.FREE_ASYNC_SKIP);
         ReKernelX.setCallback(new ReKernelXCallback() {
             @Override
             public void binder(int binderType, int oneway, int fromUid, int fromPid,
@@ -48,8 +50,7 @@ new Thread(() -> {
         ReKernelX.pollEvent(); // 阻塞，直到 disconnect
     }
 }).start();
-
-ReKernelX.addMonitorNet(1000);
 ReKernelX.delMonitorNet(1000);
+ReKernelX.delFreeAsync("android.os.IMessenger", -1);
 ReKernelX.disconnect(); // 必须在 pollEvent 以外的线程调用
 ```

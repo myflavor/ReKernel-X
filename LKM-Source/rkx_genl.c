@@ -53,9 +53,57 @@ static int rkx_genl_del_monitor_net(struct sk_buff *skb, struct genl_info *info)
     return 0;
 }
 
+static int rkx_genl_add_free_async(struct sk_buff *skb, struct genl_info *info)
+{
+    const char *rpc_name;
+    s32 code;
+    u8 strategy;
+    int rc;
+
+    if (!info->attrs[RKX_A_FREE_ASYNC_RPC_NAME] ||
+        !info->attrs[RKX_A_FREE_ASYNC_CODE] ||
+        !info->attrs[RKX_A_FREE_ASYNC_STRATEGY])
+    {
+        return -EINVAL;
+    }
+
+    rpc_name = nla_data(info->attrs[RKX_A_FREE_ASYNC_RPC_NAME]);
+    code = nla_get_s32(info->attrs[RKX_A_FREE_ASYNC_CODE]);
+    strategy = nla_get_u8(info->attrs[RKX_A_FREE_ASYNC_STRATEGY]);
+
+    rc = add_free_async(rpc_name, code, strategy);
+    if (rc)
+        return rc;
+    return 0;
+}
+
+static int rkx_genl_del_free_async(struct sk_buff *skb, struct genl_info *info)
+{
+    const char *rpc_name;
+    s32 code;
+    int rc;
+
+    if (!info->attrs[RKX_A_FREE_ASYNC_RPC_NAME] ||
+        !info->attrs[RKX_A_FREE_ASYNC_CODE])
+    {
+        return -EINVAL;
+    }
+
+    rpc_name = nla_data(info->attrs[RKX_A_FREE_ASYNC_RPC_NAME]);
+    code = nla_get_s32(info->attrs[RKX_A_FREE_ASYNC_CODE]);
+
+    rc = del_free_async(rpc_name, code);
+    if (rc)
+        return rc;
+    return 0;
+}
+
 static const struct nla_policy rkx_genl_policy[RKX_A_MAX + 1] = {
     [RKX_A_EVENT] = {.type = NLA_NESTED},
     [RKX_A_UID] = {.type = NLA_U32},
+    [RKX_A_FREE_ASYNC_STRATEGY] = {.type = NLA_U8},
+    [RKX_A_FREE_ASYNC_RPC_NAME] = {.type = NLA_NUL_STRING, .len = INTERFACETOKEN_BUFF_SIZE - 1},
+    [RKX_A_FREE_ASYNC_CODE] = {.type = NLA_S32},
 };
 
 static const struct genl_ops rkx_genl_ops[] = {
@@ -66,6 +114,14 @@ static const struct genl_ops rkx_genl_ops[] = {
     {
         .cmd = RKX_C_DEL_MONITOR_NET,
         .doit = rkx_genl_del_monitor_net,
+    },
+    {
+        .cmd = RKX_C_ADD_FREE_ASYNC,
+        .doit = rkx_genl_add_free_async,
+    },
+    {
+        .cmd = RKX_C_DEL_FREE_ASYNC,
+        .doit = rkx_genl_del_free_async,
     },
 };
 

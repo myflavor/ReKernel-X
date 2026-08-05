@@ -28,9 +28,11 @@ struct task_struct;
 enum rkx_genl_cmd
 {
 	RKX_C_UNSPEC,
-	RKX_C_EVENT,			  // kernel -> user 
+	RKX_C_EVENT,			  // kernel -> user
 	RKX_C_ADD_MONITOR_NET, // user -> kernel
 	RKX_C_DEL_MONITOR_NET, // user -> kernel
+	RKX_C_ADD_FREE_ASYNC,  // user -> kernel
+	RKX_C_DEL_FREE_ASYNC,  // user -> kernel
 	__RKX_C_MAX,
 };
 #define RKX_C_MAX (__RKX_C_MAX - 1)
@@ -70,9 +72,22 @@ enum rkx_genl_attr
 
 	RKX_A_UID = 40, // u32
 
+	// free-async rule
+	RKX_A_FREE_ASYNC_STRATEGY = 41, // u8
+	RKX_A_FREE_ASYNC_RPC_NAME = 42, // nul_str
+	RKX_A_FREE_ASYNC_CODE = 43,     // s32
+
 	__RKX_A_MAX = 49,
 };
 #define RKX_A_MAX __RKX_A_MAX
+
+// free async strategy
+enum rkx_free_async_strategy
+{
+	RKX_FREE_ASYNC_SKIP = 1,     // skip
+	RKX_FREE_ASYNC_BY_CODE = 2,  // code1 == code2
+	RKX_FREE_ASYNC_BY_DATA = 3,  // code1 == code2  && data1 == data2
+};
 
 // event types
 enum rkx_event_type
@@ -148,6 +163,14 @@ void add_net_uid(uid_t uid);
 void del_net_uid(uid_t uid);
 void init_net_uid(void);
 void destroy_net_uid(void);
+
+// free_async.c
+bool free_async_has_entries(void);
+bool free_async_lookup_rcu(const char *rpc_name, s32 code, u8 *strategy_out);
+int add_free_async(const char *rpc_name, s32 code, u8 strategy);
+int del_free_async(const char *rpc_name, s32 code);
+void init_free_async(void);
+void destroy_free_async(void);
 
 // frozen.c
 bool line_is_frozen(struct task_struct *task);

@@ -6,6 +6,7 @@
 - `rkx_genl.c`：Generic Netlink 通信
 - `rkx_binder.c`：Binder 钩子
 - `rkx_binder_kp.c`：Binder 异步缓存清理（kprobe）
+- `rkx_free_async.c`：异步清理管理
 - `rkx_signal.c`：信号钩子
 - `rkx_netfilter.c`：网络钩子
 - `rkx_netuid.c`：网络监控 UID 管理

@@ -517,3 +517,91 @@ Java_cn_myflv_kernel_ReKernelX_delMonitorNet(JNIEnv *env, jclass clazz, jint uid
     close(fd);
     return (n == static_cast<ssize_t>(len)) ? JNI_TRUE : JNI_FALSE;
 }
+
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_cn_myflv_kernel_ReKernelX_addFreeAsync(JNIEnv *env, jclass clazz,
+                                            jstring rpcName, jint code, jint strategy) {
+    uint16_t family = g_family_id.load();
+    if (family == 0 || g_fd.load() < 0 || !rpcName || code < -1) {
+        return JNI_FALSE;
+    }
+
+    const char *rpc_name = env->GetStringUTFChars(rpcName, nullptr);
+    if (!rpc_name || !*rpc_name) {
+        if (rpc_name) {
+            env->ReleaseStringUTFChars(rpcName, rpc_name);
+        }
+        return JNI_FALSE;
+    }
+
+    int fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_GENERIC);
+    if (fd < 0) {
+        env->ReleaseStringUTFChars(rpcName, rpc_name);
+        return JNI_FALSE;
+    }
+
+    uint8_t buf[256];
+    NlaBuilder b(buf, sizeof(buf));
+    b.putGenlHeader(family, g_seq.fetch_add(1),
+                    RKX_C_ADD_FREE_ASYNC, RKX_GENL_VERSION);
+    bool ok = b.putString(RKX_A_FREE_ASYNC_RPC_NAME, rpc_name) &&
+              b.putS32(RKX_A_FREE_ASYNC_CODE, static_cast<int32_t>(code)) &&
+              b.putU8(RKX_A_FREE_ASYNC_STRATEGY, static_cast<uint8_t>(strategy));
+    size_t len = b.finish();
+    env->ReleaseStringUTFChars(rpcName, rpc_name);
+
+    if (!ok) {
+        close(fd);
+        return JNI_FALSE;
+    }
+
+    struct sockaddr_nl dst = {};
+    dst.nl_family = AF_NETLINK;
+    ssize_t n = sendto(fd, buf, len, 0, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst));
+    close(fd);
+    return (n == static_cast<ssize_t>(len)) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_cn_myflv_kernel_ReKernelX_delFreeAsync(JNIEnv *env, jclass clazz,
+                                            jstring rpcName, jint code) {
+    uint16_t family = g_family_id.load();
+    if (family == 0 || g_fd.load() < 0 || !rpcName || code < -1) {
+        return JNI_FALSE;
+    }
+
+    const char *rpc_name = env->GetStringUTFChars(rpcName, nullptr);
+    if (!rpc_name || !*rpc_name) {
+        if (rpc_name) {
+            env->ReleaseStringUTFChars(rpcName, rpc_name);
+        }
+        return JNI_FALSE;
+    }
+
+    int fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_GENERIC);
+    if (fd < 0) {
+        env->ReleaseStringUTFChars(rpcName, rpc_name);
+        return JNI_FALSE;
+    }
+
+    uint8_t buf[256];
+    NlaBuilder b(buf, sizeof(buf));
+    b.putGenlHeader(family, g_seq.fetch_add(1),
+                    RKX_C_DEL_FREE_ASYNC, RKX_GENL_VERSION);
+    bool ok = b.putString(RKX_A_FREE_ASYNC_RPC_NAME, rpc_name) &&
+              b.putS32(RKX_A_FREE_ASYNC_CODE, static_cast<int32_t>(code));
+    size_t len = b.finish();
+    env->ReleaseStringUTFChars(rpcName, rpc_name);
+
+    if (!ok) {
+        close(fd);
+        return JNI_FALSE;
+    }
+
+    struct sockaddr_nl dst = {};
+    dst.nl_family = AF_NETLINK;
+    ssize_t n = sendto(fd, buf, len, 0, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst));
+    close(fd);
+    return (n == static_cast<ssize_t>(len)) ? JNI_TRUE : JNI_FALSE;
+}
