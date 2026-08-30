@@ -51,29 +51,26 @@ jobs:
           name: rekernel_x-aar
           path: Develop/rekernel_x/build/outputs/aar/rekernel_x-release.aar
 
+  kmi-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.load.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: load
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const raw = fs.readFileSync('.github/kmi-matrix.json', 'utf8');
+            core.setOutput('matrix', JSON.parse(raw));
+
   build-lkm:
-    name: Build LKM
+    name: Build LKM for ${{ matrix.kmi }}
+    needs: kmi-matrix
     strategy:
       matrix:
-        include:
-          - kmi: android12-5.10
-            ddk_release: '20260313'
-          - kmi: android13-5.10
-            ddk_release: '20260313'
-          - kmi: android13-5.15
-            ddk_release: '20260313'
-          - kmi: android14-5.15
-            ddk_release: '20260313'
-          - kmi: android14-6.1
-            ddk_release: '20250825'
-          - kmi: android14-6.1
-            ddk_release: '20260313'
-          - kmi: android15-6.6
-            ddk_release: '20260313'
-          - kmi: android16-6.12
-            ddk_release: '20251104'
-          - kmi: android16-6.12
-            ddk_release: '20260313'
+        include: ${{ fromJSON(needs.kmi-matrix.outputs.matrix) }}
     uses: ./.github/workflows/ddk-lkm.yml
     with:
       kmi: ${{ matrix.kmi }}

@@ -16,7 +16,7 @@
 
 static bool re_signal_hook;
 
-void line_signal(void *data, int sig, struct task_struct *killer, struct task_struct *dst)
+static void line_signal(void *data, int sig, struct task_struct *killer, struct task_struct *dst)
 {
 	if (!dst || !killer)
 		return;
