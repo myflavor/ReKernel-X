@@ -2,29 +2,64 @@ name: Build ReKernel-X LKM
 on:
   workflow_dispatch:
 jobs:
+  kmi-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.load.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: load
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const raw = fs.readFileSync('.github/kmi-matrix.json', 'utf8');
+            core.setOutput('matrix', JSON.parse(raw));
   build-lkm:
+    name: Build LKM for ${{ matrix.kmi }}
+    needs: kmi-matrix
     strategy:
       matrix:
-        include:
-          - kmi: android12-5.10
-            ddk_release: '20260313'
-          - kmi: android13-5.10
-            ddk_release: '20260313'
-          - kmi: android13-5.15
-            ddk_release: '20260313'
-          - kmi: android14-5.15
-            ddk_release: '20260313'
-          - kmi: android14-6.1
-            ddk_release: '20250825'
-          - kmi: android14-6.1
-            ddk_release: '20260313'
-          - kmi: android15-6.6
-            ddk_release: '20260313'
-          - kmi: android16-6.12
-            ddk_release: '20251104'
-          - kmi: android16-6.12
-            ddk_release: '20260313'
+        include: ${{ fromJSON(needs.kmi-matrix.outputs.matrix) }}
     uses: ./.github/workflows/ddk-lkm.yml
     with:
       kmi: ${{ matrix.kmi }}
       ddk_release: ${{ matrix.ddk_release }}
+
+  package:
+    name: Package Magisk module
+    needs: build-lkm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download LKM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: kmod-artifacts
+          pattern: rekernel_x-*.ko
+
+      - name: Prepare Magisk module
+        run: |
+          VERSION=dev-$(echo "${{ github.sha }}" | cut -c1-7)
+          VERSION_CODE=${{ github.run_number }}
+
+          cp -r template ReKernel-X
+          sed -i "s/@VERSION@/${VERSION}/g" ReKernel-X/module.prop
+          sed -i "s/@VERSION_CODE@/${VERSION_CODE}/g" ReKernel-X/module.prop
+
+          mkdir -p ReKernel-X/kmod
+          for dir in kmod-artifacts/rekernel_x-*.ko/; do
+            cp "$dir"/*.ko ReKernel-X/kmod/
+          done
+
+          echo "=== module.prop ==="
+          cat ReKernel-X/module.prop
+          echo "=== kmod contents ==="
+          ls -lh ReKernel-X/kmod/
+
+      - name: Upload Magisk module
+        uses: actions/upload-artifact@v4
+        with:
+          name: ReKernel-X-dev
+          path: ReKernel-X/

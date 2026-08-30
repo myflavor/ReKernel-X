@@ -10,7 +10,7 @@ on:
       ddk_release:
         description: 'DDK release version'
         required: false
-        default: '20260313'
+        default: '20260828'
         type: string
       version:
         description: 'ReKernel-X version'
@@ -20,7 +20,7 @@ on:
 
 jobs:
   build-rekernel_x-ko:
-    name: Build rekernel_x.ko for ${{ inputs.kmi }}-${{ inputs.ddk_release }}
+    name: Build LKM for ${{ inputs.kmi }}-${{ inputs.ddk_release }}
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ylarod/ddk:${{ inputs.kmi }}-${{ inputs.ddk_release }}
@@ -57,7 +57,7 @@ jobs:
           llvm-strip -d "/github/workspace/out/$OUTPUT_NAME"
           ls -la "/github/workspace/out/$OUTPUT_NAME"
 
-      - name: Upload rekernel_x.ko artifact
+      - name: Upload LKM for ${{ inputs.kmi }}-${{ inputs.ddk_release }}
         uses: actions/upload-artifact@v7
         with:
           name: rekernel_x-${{ inputs.kmi }}-${{ inputs.ddk_release }}.ko

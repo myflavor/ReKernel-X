@@ -80,3 +80,4 @@ module_init(start_rekernel);
 module_exit(exit_rekernel);
 
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("Kernel support for Tombstone modules");
