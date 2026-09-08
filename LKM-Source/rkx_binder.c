@@ -18,11 +18,11 @@
 #include "../android/binder_internal.h"
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
-void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_async_space, int is_async, bool *should_fail)
+static void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_async_space, int is_async, bool *should_fail)
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
-void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_async_space, int is_async)
+static void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_async_space, int is_async)
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
-void line_binder_alloc_new_buf_locked(void *data, size_t size, struct binder_alloc *alloc, int is_async)
+static void line_binder_alloc_new_buf_locked(void *data, size_t size, struct binder_alloc *alloc, int is_async)
 #endif
 {
 	struct task_struct *p = NULL;
@@ -71,10 +71,10 @@ static bool re_binder_hook_reply;
 static bool re_binder_hook_trans;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
-void line_binder_preset(void *data, struct hlist_head *hhead,
+static void line_binder_preset(void *data, struct hlist_head *hhead,
 	struct mutex *lock, struct binder_proc *proc)
 #else
-void line_binder_preset(void *data, struct hlist_head *hhead,
+static void line_binder_preset(void *data, struct hlist_head *hhead,
 	struct mutex *lock)
 #endif
 {
@@ -85,7 +85,7 @@ void line_binder_preset(void *data, struct hlist_head *hhead,
 		binder_procs_lock = lock;
 }
 
-void line_binder_reply(void *data, struct binder_proc *target_proc, struct binder_proc *proc,
+static void line_binder_reply(void *data, struct binder_proc *target_proc, struct binder_proc *proc,
 	struct binder_thread *thread, struct binder_transaction_data *tr)
 {
 	if (target_proc
@@ -137,7 +137,7 @@ static long line_copy_from_user_compatible(void *dst, const void __user *src, si
 #endif
 }
 
-void line_binder_transaction(void *data, struct binder_proc *target_proc, struct binder_proc *proc,
+static void line_binder_transaction(void *data, struct binder_proc *target_proc, struct binder_proc *proc,
 	struct binder_thread *thread, struct binder_transaction_data *tr)
 {
 	if (!(tr->flags & TF_ONE_WAY) /* sync binder */

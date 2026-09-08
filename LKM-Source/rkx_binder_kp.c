@@ -16,6 +16,7 @@
 #include <linux/kprobes.h>
 #include <linux/string.h>
 #include <linux/version.h>
+#include <linux/workqueue.h>
 #include "../android/binder_internal.h"
 
 static unsigned long (*re_kallsyms_lookup_name)(const char* name);
@@ -23,6 +24,15 @@ static void (*re_binder_transaction_buffer_release)(struct binder_proc* proc, st
 static void (*re_binder_alloc_free_buf)(struct binder_alloc* alloc, struct binder_buffer* buffer);
 static int (*re_binder_alloc_copy_from_buffer)(struct binder_alloc* alloc, void* dest, struct binder_buffer* buffer, binder_size_t buffer_offset, size_t bytes);
 static struct binder_stats(*re_binder_stats);
+
+static struct workqueue_struct *rkx_free_wq;
+
+struct rkx_free_txn_work {
+	struct work_struct work;
+	struct binder_proc *proc;
+	struct binder_buffer *buffer;
+	struct binder_transaction *t;
+};
 
 static inline void binder_inner_proc_lock(struct binder_proc* proc)
 __acquires(&proc->inner_lock)
@@ -165,6 +175,41 @@ static inline void binder_stats_deleted(enum binder_stat_types type)
 	atomic_inc(&re_binder_stats->obj_deleted[type]);
 }
 
+static void __nocfi rkx_free_txn_func(struct work_struct *work)
+{
+	struct rkx_free_txn_work *w =
+		container_of(work, struct rkx_free_txn_work, work);
+
+	binder_release_entire_buffer(w->proc, NULL, w->buffer, false);
+	re_binder_alloc_free_buf(&w->proc->alloc, w->buffer);
+	kfree(w->t);
+	binder_stats_deleted(BINDER_STAT_TRANSACTION);
+	kfree(w);
+}
+
+static void __nocfi rkx_queue_free_txn(struct binder_proc *proc,
+	struct binder_transaction *t, struct binder_buffer *buffer)
+{
+	struct rkx_free_txn_work *w;
+
+	w = kzalloc(sizeof(*w), GFP_ATOMIC);
+	if (w && rkx_free_wq) {
+		w->proc = proc;
+		w->buffer = buffer;
+		w->t = t;
+		INIT_WORK(&w->work, rkx_free_txn_func);
+		queue_work(rkx_free_wq, &w->work);
+		return;
+	}
+
+	kfree(w);
+	rkx_log_err("free-async: work alloc failed, free sync (may sleep)\n");
+	binder_release_entire_buffer(proc, NULL, buffer, false);
+	re_binder_alloc_free_buf(&proc->alloc, buffer);
+	kfree(t);
+	binder_stats_deleted(BINDER_STAT_TRANSACTION);
+}
+
 static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs* regs)
 {
 	struct binder_transaction* t = (struct binder_transaction*)regs->regs[0];
@@ -205,10 +250,7 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 				task_uid(proc->tsk).val, rpc_name, t->code, strategy, t_outdated->debug_id, buffer->data_size);
 			t_outdated->buffer = NULL;
 			buffer->transaction = NULL;
-			binder_release_entire_buffer(proc, NULL, buffer, false);
-			re_binder_alloc_free_buf(&proc->alloc, buffer);
-			kfree(t_outdated);
-			binder_stats_deleted(BINDER_STAT_TRANSACTION);
+			rkx_queue_free_txn(proc, t_outdated, buffer);
 		}
 	}
 	return 0;
@@ -224,15 +266,22 @@ static struct kprobe kp_binder_proc_transaction = {
 
 static bool re_kp_binder_proc_registered;
 
-void __nocfi register_binder_kp(void) {
+void __nocfi register_binder_kp(void)
+{
 	int rc = LINE_SUCCESS;
+
+	rkx_free_wq = alloc_workqueue("rkx_free_async", WQ_UNBOUND | WQ_MEM_RECLAIM, 0);
+	if (!rkx_free_wq) {
+		rkx_log_err("alloc free-async workqueue failed (free-async disabled)\n");
+		goto err;
+	}
 
 	rc = register_kprobe(&kp_kallsyms_lookup_name);
 	if (rc != LINE_SUCCESS) {
 		rkx_log_err("register kallsyms_lookup_name kprobe failed, rc=%d (free-async disabled)\n", rc);
-		return;
+		goto err;
 	}
-	re_kallsyms_lookup_name = (void*)kp_kallsyms_lookup_name.addr;
+	re_kallsyms_lookup_name = (void *)kp_kallsyms_lookup_name.addr;
 	unregister_kprobe(&kp_kallsyms_lookup_name);
 
 	re_binder_transaction_buffer_release = (void*)re_kallsyms_lookup_name("binder_transaction_buffer_release");
@@ -247,20 +296,30 @@ void __nocfi register_binder_kp(void) {
 	if (re_binder_transaction_buffer_release == NULL || re_binder_alloc_free_buf == NULL ||
 	    re_binder_alloc_copy_from_buffer == NULL || re_binder_stats == NULL) {
 		rkx_log_err("resolve binder symbols failed (free-async disabled)\n");
-		return;
+		goto err;
 	}
 
 	rc = register_kprobe(&kp_binder_proc_transaction);
 	if (rc != LINE_SUCCESS) {
 		rkx_log_err("register binder_proc_transaction kprobe failed, rc=%d (free-async disabled)\n", rc);
-		return;
+		goto err;
 	}
 	re_kp_binder_proc_registered = true;
+	return;
+
+err:
+	unregister_binder_kp();
 }
 
-void unregister_binder_kp(void) {
+void unregister_binder_kp(void)
+{
 	if (re_kp_binder_proc_registered) {
 		unregister_kprobe(&kp_binder_proc_transaction);
 		re_kp_binder_proc_registered = false;
+	}
+	if (rkx_free_wq) {
+		flush_workqueue(rkx_free_wq);
+		destroy_workqueue(rkx_free_wq);
+		rkx_free_wq = NULL;
 	}
 }
