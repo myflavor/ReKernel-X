@@ -316,13 +316,9 @@ void __nocfi rkx_register_binder_kp(void)
 	k_binder_free_proc = (void*)k_kallsyms_lookup_name("binder_free_proc");
 #endif
 
-	if (k_binder_proc_dec_tmpref == NULL && k_binder_free_proc == NULL) {
-		rkx_log_err("resolve tmpref helpers failed (free-async disabled)\n");
-		goto err;
-	}
-
 	if (k_binder_transaction_buffer_release == NULL || k_binder_alloc_free_buf == NULL ||
-	    k_binder_alloc_copy_from_buffer == NULL || k_binder_stats == NULL) {
+	    k_binder_alloc_copy_from_buffer == NULL || k_binder_stats == NULL ||
+	    (k_binder_proc_dec_tmpref == NULL && k_binder_free_proc == NULL)) {
 		rkx_log_err("resolve binder symbols failed (free-async disabled)\n");
 		goto err;
 	}
