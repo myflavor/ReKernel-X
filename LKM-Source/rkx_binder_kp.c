@@ -24,6 +24,10 @@ static void (*k_binder_transaction_buffer_release)(struct binder_proc* proc, str
 static void (*k_binder_alloc_free_buf)(struct binder_alloc* alloc, struct binder_buffer* buffer);
 static int (*k_binder_alloc_copy_from_buffer)(struct binder_alloc* alloc, void* dest, struct binder_buffer* buffer, binder_size_t buffer_offset, size_t bytes);
 static struct binder_stats(*k_binder_stats);
+static void (*k_binder_proc_dec_tmpref)(struct binder_proc* proc);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
+static void (*k_binder_free_proc)(struct binder_proc* proc);
+#endif
 
 static struct workqueue_struct *rkx_free_wq;
 
@@ -175,6 +179,28 @@ static inline void k_binder_stats_deleted(enum binder_stat_types type)
 	atomic_inc(&k_binder_stats->obj_deleted[type]);
 }
 
+static void __nocfi rk_binder_proc_dec_tmpref(struct binder_proc *proc)
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
+	/* 5.10 的构建可能把 binder_proc_dec_tmpref 内联掉，只有 binder_free_proc 还在 */
+	if (k_binder_proc_dec_tmpref) {
+		k_binder_proc_dec_tmpref(proc);
+		return;
+	}
+
+	rk_binder_inner_proc_lock(proc);
+	proc->tmp_ref--;
+	if (proc->is_dead && RB_EMPTY_ROOT(&proc->threads) && !proc->tmp_ref) {
+		rk_binder_inner_proc_unlock(proc);
+		k_binder_free_proc(proc);
+		return;
+	}
+	rk_binder_inner_proc_unlock(proc);
+#else
+	k_binder_proc_dec_tmpref(proc);
+#endif
+}
+
 static void __nocfi rkx_free_txn_func(struct work_struct *work)
 {
 	struct rkx_free_txn_work *w =
@@ -184,30 +210,18 @@ static void __nocfi rkx_free_txn_func(struct work_struct *work)
 	k_binder_alloc_free_buf(&w->proc->alloc, w->buffer);
 	kfree(w->t);
 	k_binder_stats_deleted(BINDER_STAT_TRANSACTION);
+	rk_binder_proc_dec_tmpref(w->proc);
 	kfree(w);
 }
 
-static void __nocfi rkx_queue_free_txn(struct binder_proc *proc,
-	struct binder_transaction *t, struct binder_buffer *buffer)
+static void __nocfi rkx_queue_free_txn(struct rkx_free_txn_work *w,
+	struct binder_proc *proc, struct binder_transaction *t, struct binder_buffer *buffer)
 {
-	struct rkx_free_txn_work *w;
-
-	w = kzalloc(sizeof(*w), GFP_ATOMIC);
-	if (w && rkx_free_wq) {
-		w->proc = proc;
-		w->buffer = buffer;
-		w->t = t;
-		INIT_WORK(&w->work, rkx_free_txn_func);
-		queue_work(rkx_free_wq, &w->work);
-		return;
-	}
-
-	kfree(w);
-	rkx_log_err("free-async: work alloc failed, free sync (may sleep)\n");
-	k_binder_release_entire_buffer(proc, NULL, buffer, false);
-	k_binder_alloc_free_buf(&proc->alloc, buffer);
-	kfree(t);
-	k_binder_stats_deleted(BINDER_STAT_TRANSACTION);
+	w->proc = proc;
+	w->buffer = buffer;
+	w->t = t;
+	INIT_WORK(&w->work, rkx_free_txn_func);
+	queue_work(rkx_free_wq, &w->work);
 }
 
 static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs* regs)
@@ -217,10 +231,11 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 
 	struct binder_node* node = t->buffer->target_node;
 	struct binder_transaction* t_outdated = NULL;
+	struct rkx_free_txn_work* w = NULL;
 	char rpc_name[INTERFACETOKEN_BUFF_SIZE] = {0};
 	u8 strategy;
 
-	if (!node || !proc || proc->is_frozen || !(t->flags & TF_ONE_WAY))
+	if (!node || !proc || !(t->flags & TF_ONE_WAY))
 		return 0;
 
 	if (rkx_is_frozen(proc->tsk)) {
@@ -236,10 +251,21 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 			return 0;
 		}
 		rk_binder_inner_proc_lock(proc);
+		if (proc->is_dead || proc->is_frozen) {
+			rk_binder_inner_proc_unlock(proc);
+			rk_binder_node_unlock(node);
+			return 0;
+		}
 		t_outdated = rk_binder_find_outdated_transaction_ilocked(t, &node->async_todo, strategy);
 		if (t_outdated) {
-			list_del_init(&t_outdated->work.entry);
-			proc->outstanding_txns--;
+			w = kzalloc(sizeof(*w), GFP_ATOMIC);
+			if (!w) {
+				t_outdated = NULL;
+			} else {
+				proc->tmp_ref++;
+				list_del_init(&t_outdated->work.entry);
+				proc->outstanding_txns--;
+			}
 		}
 		rk_binder_inner_proc_unlock(proc);
 		rk_binder_node_unlock(node);
@@ -250,7 +276,7 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 				task_uid(proc->tsk).val, rpc_name, t->code, strategy, t_outdated->debug_id, buffer->data_size);
 			t_outdated->buffer = NULL;
 			buffer->transaction = NULL;
-			rkx_queue_free_txn(proc, t_outdated, buffer);
+			rkx_queue_free_txn(w, proc, t_outdated, buffer);
 		}
 	}
 	return 0;
@@ -292,6 +318,19 @@ void __nocfi rkx_register_binder_kp(void)
 	k_binder_alloc_copy_from_buffer = (void *)k_kallsyms_lookup_name("binder_alloc_copy_from_buffer");
 #endif
 	k_binder_stats = (void*)k_kallsyms_lookup_name("binder_stats");
+	k_binder_proc_dec_tmpref = (void*)k_kallsyms_lookup_name("binder_proc_dec_tmpref");
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
+	k_binder_free_proc = (void*)k_kallsyms_lookup_name("binder_free_proc");
+	if (k_binder_proc_dec_tmpref == NULL && k_binder_free_proc == NULL) {
+		rkx_log_err("resolve tmpref helpers failed (free-async disabled)\n");
+		goto err;
+	}
+#else
+	if (k_binder_proc_dec_tmpref == NULL) {
+		rkx_log_err("resolve binder_proc_dec_tmpref failed (free-async disabled)\n");
+		goto err;
+	}
+#endif
 
 	if (k_binder_transaction_buffer_release == NULL || k_binder_alloc_free_buf == NULL ||
 	    k_binder_alloc_copy_from_buffer == NULL || k_binder_stats == NULL) {
