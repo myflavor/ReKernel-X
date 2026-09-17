@@ -25,9 +25,7 @@ static void (*k_binder_alloc_free_buf)(struct binder_alloc* alloc, struct binder
 static int (*k_binder_alloc_copy_from_buffer)(struct binder_alloc* alloc, void* dest, struct binder_buffer* buffer, binder_size_t buffer_offset, size_t bytes);
 static struct binder_stats(*k_binder_stats);
 static void (*k_binder_proc_dec_tmpref)(struct binder_proc* proc);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
 static void (*k_binder_free_proc)(struct binder_proc* proc);
-#endif
 
 static struct workqueue_struct *rkx_free_wq;
 
@@ -181,7 +179,6 @@ static inline void k_binder_stats_deleted(enum binder_stat_types type)
 
 static void __nocfi rk_binder_proc_dec_tmpref(struct binder_proc *proc)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
 	if (k_binder_proc_dec_tmpref) {
 		k_binder_proc_dec_tmpref(proc);
 		return;
@@ -195,9 +192,6 @@ static void __nocfi rk_binder_proc_dec_tmpref(struct binder_proc *proc)
 		return;
 	}
 	rk_binder_inner_proc_unlock(proc);
-#else
-	k_binder_proc_dec_tmpref(proc);
-#endif
 }
 
 static void __nocfi rkx_free_txn_func(struct work_struct *work)
@@ -320,16 +314,12 @@ void __nocfi rkx_register_binder_kp(void)
 	k_binder_proc_dec_tmpref = (void*)k_kallsyms_lookup_name("binder_proc_dec_tmpref");
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
 	k_binder_free_proc = (void*)k_kallsyms_lookup_name("binder_free_proc");
+#endif
+
 	if (k_binder_proc_dec_tmpref == NULL && k_binder_free_proc == NULL) {
 		rkx_log_err("resolve tmpref helpers failed (free-async disabled)\n");
 		goto err;
 	}
-#else
-	if (k_binder_proc_dec_tmpref == NULL) {
-		rkx_log_err("resolve binder_proc_dec_tmpref failed (free-async disabled)\n");
-		goto err;
-	}
-#endif
 
 	if (k_binder_transaction_buffer_release == NULL || k_binder_alloc_free_buf == NULL ||
 	    k_binder_alloc_copy_from_buffer == NULL || k_binder_stats == NULL) {
