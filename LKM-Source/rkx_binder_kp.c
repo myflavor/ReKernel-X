@@ -258,12 +258,12 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 		t_outdated = rk_binder_find_outdated_transaction_ilocked(t, &node->async_todo, strategy);
 		if (t_outdated) {
 			w = kzalloc(sizeof(*w), GFP_ATOMIC);
-			if (!w) {
-				t_outdated = NULL;
-			} else {
+			if (w) {
 				proc->tmp_ref++;
 				list_del_init(&t_outdated->work.entry);
 				proc->outstanding_txns--;
+			} else {
+				t_outdated = NULL;
 			}
 		}
 		rk_binder_inner_proc_unlock(proc);
