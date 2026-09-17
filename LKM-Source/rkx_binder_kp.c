@@ -234,7 +234,7 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 	char rpc_name[INTERFACETOKEN_BUFF_SIZE] = {0};
 	u8 strategy;
 
-	if (!node || !proc || !(t->flags & TF_ONE_WAY))
+	if (!(t->flags & TF_ONE_WAY))
 		return 0;
 
 	if (rkx_is_frozen(proc->tsk)) {
