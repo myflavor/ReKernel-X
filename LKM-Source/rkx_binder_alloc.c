@@ -19,7 +19,7 @@
 #include <linux/list.h>
 #include <linux/err.h>
 
-static inline void rkx_memcpy_from_page(char *to, struct page *page,
+static inline void rk_memcpy_from_page(char *to, struct page *page,
 	size_t offset, size_t len)
 {
 	char *from;
@@ -35,25 +35,25 @@ static inline void rkx_memcpy_from_page(char *to, struct page *page,
 #endif
 }
 
-static struct binder_buffer *rkx_binder_buffer_next(struct binder_buffer *buffer)
+static struct binder_buffer *k_binder_buffer_next(struct binder_buffer *buffer)
 {
 	return list_entry(buffer->entry.next, struct binder_buffer, entry);
 }
 
-static size_t rkx_binder_alloc_buffer_size(struct binder_alloc *alloc,
+static size_t k_binder_alloc_buffer_size(struct binder_alloc *alloc,
 	struct binder_buffer *buffer)
 {
 	if (list_is_last(&buffer->entry, &alloc->buffers))
 		return (size_t)((uintptr_t)alloc->buffer + alloc->buffer_size -
 			(uintptr_t)buffer->user_data);
-	return (size_t)((uintptr_t)rkx_binder_buffer_next(buffer)->user_data -
+	return (size_t)((uintptr_t)k_binder_buffer_next(buffer)->user_data -
 		(uintptr_t)buffer->user_data);
 }
 
-static inline bool rkx_check_buffer(struct binder_alloc *alloc,
+static inline bool k_check_buffer(struct binder_alloc *alloc,
 	struct binder_buffer *buffer, binder_size_t offset, size_t bytes)
 {
-	size_t buffer_size = rkx_binder_alloc_buffer_size(alloc, buffer);
+	size_t buffer_size = k_binder_alloc_buffer_size(alloc, buffer);
 
 	return buffer_size >= bytes &&
 		offset <= buffer_size - bytes &&
@@ -62,7 +62,7 @@ static inline bool rkx_check_buffer(struct binder_alloc *alloc,
 		(!buffer->allow_user_free || !buffer->transaction);
 }
 
-static struct page *rkx_binder_alloc_get_page(struct binder_alloc *alloc,
+static struct page *k_binder_alloc_get_page(struct binder_alloc *alloc,
 	struct binder_buffer *buffer, binder_size_t buffer_offset, pgoff_t *pgoffp)
 {
 	binder_size_t buffer_space_offset = buffer_offset +
@@ -76,11 +76,11 @@ static struct page *rkx_binder_alloc_get_page(struct binder_alloc *alloc,
 	return lru_page->page_ptr;
 }
 
-static int rkx_binder_alloc_do_buffer_copy(struct binder_alloc *alloc,
+static int k_binder_alloc_do_buffer_copy(struct binder_alloc *alloc,
 	bool to_buffer, struct binder_buffer *buffer,
 	binder_size_t buffer_offset, void *ptr, size_t bytes)
 {
-	if (!rkx_check_buffer(alloc, buffer, buffer_offset, bytes))
+	if (!k_check_buffer(alloc, buffer, buffer_offset, bytes))
 		return -EINVAL;
 
 	while (bytes) {
@@ -88,12 +88,12 @@ static int rkx_binder_alloc_do_buffer_copy(struct binder_alloc *alloc,
 		struct page *page;
 		pgoff_t pgoff;
 
-		page = rkx_binder_alloc_get_page(alloc, buffer, buffer_offset, &pgoff);
+		page = k_binder_alloc_get_page(alloc, buffer, buffer_offset, &pgoff);
 		size = min_t(size_t, bytes, PAGE_SIZE - pgoff);
 		if (to_buffer)
 			return -EINVAL;
 		else
-			rkx_memcpy_from_page(ptr, page, pgoff, size);
+			rk_memcpy_from_page(ptr, page, pgoff, size);
 		bytes -= size;
 		ptr = (u8 *)ptr + size;
 		buffer_offset += size;
@@ -101,15 +101,15 @@ static int rkx_binder_alloc_do_buffer_copy(struct binder_alloc *alloc,
 	return 0;
 }
 
-int rkx_binder_copy_from_buffer(struct binder_alloc *alloc, void *dest,
+int rk_binder_alloc_copy_from_buffer(struct binder_alloc *alloc, void *dest,
 	struct binder_buffer *buffer, binder_size_t buffer_offset, size_t bytes)
 {
-	return rkx_binder_alloc_do_buffer_copy(alloc, false, buffer,
+	return k_binder_alloc_do_buffer_copy(alloc, false, buffer,
 		buffer_offset, dest, bytes);
 }
 
 #else
 
-static int rkx_binder_alloc_legacy_unused __maybe_unused;
+static int legacy_unused __maybe_unused;
 
 #endif

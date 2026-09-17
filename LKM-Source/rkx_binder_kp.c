@@ -19,11 +19,11 @@
 #include <linux/workqueue.h>
 #include "../android/binder_internal.h"
 
-static unsigned long (*re_kallsyms_lookup_name)(const char* name);
-static void (*re_binder_transaction_buffer_release)(struct binder_proc* proc, struct binder_thread* thread, struct binder_buffer* buffer, binder_size_t off_end_offset, bool is_failure);
-static void (*re_binder_alloc_free_buf)(struct binder_alloc* alloc, struct binder_buffer* buffer);
-static int (*re_binder_alloc_copy_from_buffer)(struct binder_alloc* alloc, void* dest, struct binder_buffer* buffer, binder_size_t buffer_offset, size_t bytes);
-static struct binder_stats(*re_binder_stats);
+static unsigned long (*k_kallsyms_lookup_name)(const char* name);
+static void (*k_binder_transaction_buffer_release)(struct binder_proc* proc, struct binder_thread* thread, struct binder_buffer* buffer, binder_size_t off_end_offset, bool is_failure);
+static void (*k_binder_alloc_free_buf)(struct binder_alloc* alloc, struct binder_buffer* buffer);
+static int (*k_binder_alloc_copy_from_buffer)(struct binder_alloc* alloc, void* dest, struct binder_buffer* buffer, binder_size_t buffer_offset, size_t bytes);
+static struct binder_stats(*k_binder_stats);
 
 static struct workqueue_struct *rkx_free_wq;
 
@@ -34,25 +34,25 @@ struct rkx_free_txn_work {
 	struct binder_transaction *t;
 };
 
-static inline void binder_inner_proc_lock(struct binder_proc* proc)
+static inline void rk_binder_inner_proc_lock(struct binder_proc* proc)
 __acquires(&proc->inner_lock)
 {
 	spin_lock(&proc->inner_lock);
 }
 
-static inline void binder_inner_proc_unlock(struct binder_proc* proc)
+static inline void rk_binder_inner_proc_unlock(struct binder_proc* proc)
 __releases(&proc->inner_lock)
 {
 	spin_unlock(&proc->inner_lock);
 }
 
-static inline void binder_node_lock(struct binder_node* node)
+static inline void rk_binder_node_lock(struct binder_node* node)
 __acquires(&node->lock)
 {
 	spin_lock(&node->lock);
 }
 
-static inline void binder_node_unlock(struct binder_node* node)
+static inline void rk_binder_node_unlock(struct binder_node* node)
 __releases(&node->lock)
 {
 	spin_unlock(&node->lock);
@@ -65,7 +65,7 @@ static bool binder_buffer_data_equal(struct binder_proc* proc,
 	u8 c1[64];
 	u8 c2[64];
 
-	if (!proc || !b1 || !b2 || !re_binder_alloc_copy_from_buffer)
+	if (!proc || !b1 || !b2 || !k_binder_alloc_copy_from_buffer)
 		return false;
 	if (b1->data_size != b2->data_size)
 		return false;
@@ -76,9 +76,9 @@ static bool binder_buffer_data_equal(struct binder_proc* proc,
 		chunk = total - pos;
 		if (chunk > sizeof(c1))
 			chunk = sizeof(c1);
-		if (re_binder_alloc_copy_from_buffer(&proc->alloc, c1, b1, pos, chunk))
+		if (k_binder_alloc_copy_from_buffer(&proc->alloc, c1, b1, pos, chunk))
 			return false;
-		if (re_binder_alloc_copy_from_buffer(&proc->alloc, c2, b2, pos, chunk))
+		if (k_binder_alloc_copy_from_buffer(&proc->alloc, c2, b2, pos, chunk))
 			return false;
 		if (memcmp(c1, c2, chunk))
 			return false;
@@ -97,7 +97,7 @@ static bool rkx_parse_interface_token(struct binder_proc* proc,
 	char* p;
 
 	if (!proc || !buffer || !rpc_name || rpc_name_size == 0 ||
-	    !re_binder_alloc_copy_from_buffer)
+	    !k_binder_alloc_copy_from_buffer)
 		return false;
 
 	rpc_name[0] = '\0';
@@ -108,7 +108,7 @@ static bool rkx_parse_interface_token(struct binder_proc* proc,
 	if (copy_size > sizeof(hdr))
 		copy_size = sizeof(hdr);
 
-	if (re_binder_alloc_copy_from_buffer(&proc->alloc, hdr, buffer, 0, copy_size))
+	if (k_binder_alloc_copy_from_buffer(&proc->alloc, hdr, buffer, 0, copy_size))
 		return false;
 
 	p = (char*)hdr + PARCEL_OFFSET;
@@ -122,7 +122,7 @@ static bool rkx_parse_interface_token(struct binder_proc* proc,
 	return i > 0;
 }
 
-static bool binder_can_update_transaction(struct binder_transaction* t1,
+static bool rk_binder_can_update_transaction(struct binder_transaction* t1,
 	struct binder_transaction* t2, u8 strategy)
 {
 	if ((t1->flags & t2->flags & TF_ONE_WAY) != TF_ONE_WAY || !t1->to_proc || !t2->to_proc)
@@ -141,7 +141,7 @@ static bool binder_can_update_transaction(struct binder_transaction* t1,
 	return false;
 }
 
-static struct binder_transaction* binder_find_outdated_transaction_ilocked(
+static struct binder_transaction* rk_binder_find_outdated_transaction_ilocked(
 	struct binder_transaction* t, struct list_head* target_list, u8 strategy)
 {
 	struct binder_work* w;
@@ -152,13 +152,13 @@ static struct binder_transaction* binder_find_outdated_transaction_ilocked(
 		if (w->type != BINDER_WORK_TRANSACTION)
 			continue;
 		t_queued = container_of(w, struct binder_transaction, work);
-		if (binder_can_update_transaction(t_queued, t, strategy))
+		if (rk_binder_can_update_transaction(t_queued, t, strategy))
 			return t_queued;
 	}
 	return NULL;
 }
 
-static inline void __nocfi binder_release_entire_buffer(struct binder_proc* proc,
+static inline void __nocfi k_binder_release_entire_buffer(struct binder_proc* proc,
 	struct binder_thread* thread, struct binder_buffer* buffer, bool is_failure)
 {
 	binder_size_t off_end_offset;
@@ -166,13 +166,13 @@ static inline void __nocfi binder_release_entire_buffer(struct binder_proc* proc
 	off_end_offset = ALIGN(buffer->data_size, sizeof(void*));
 	off_end_offset += buffer->offsets_size;
 
-	re_binder_transaction_buffer_release(proc, thread, buffer,
+	k_binder_transaction_buffer_release(proc, thread, buffer,
 		off_end_offset, is_failure);
 }
 
-static inline void binder_stats_deleted(enum binder_stat_types type)
+static inline void k_binder_stats_deleted(enum binder_stat_types type)
 {
-	atomic_inc(&re_binder_stats->obj_deleted[type]);
+	atomic_inc(&k_binder_stats->obj_deleted[type]);
 }
 
 static void __nocfi rkx_free_txn_func(struct work_struct *work)
@@ -180,10 +180,10 @@ static void __nocfi rkx_free_txn_func(struct work_struct *work)
 	struct rkx_free_txn_work *w =
 		container_of(work, struct rkx_free_txn_work, work);
 
-	binder_release_entire_buffer(w->proc, NULL, w->buffer, false);
-	re_binder_alloc_free_buf(&w->proc->alloc, w->buffer);
+	k_binder_release_entire_buffer(w->proc, NULL, w->buffer, false);
+	k_binder_alloc_free_buf(&w->proc->alloc, w->buffer);
 	kfree(w->t);
-	binder_stats_deleted(BINDER_STAT_TRANSACTION);
+	k_binder_stats_deleted(BINDER_STAT_TRANSACTION);
 	kfree(w);
 }
 
@@ -204,10 +204,10 @@ static void __nocfi rkx_queue_free_txn(struct binder_proc *proc,
 
 	kfree(w);
 	rkx_log_err("free-async: work alloc failed, free sync (may sleep)\n");
-	binder_release_entire_buffer(proc, NULL, buffer, false);
-	re_binder_alloc_free_buf(&proc->alloc, buffer);
+	k_binder_release_entire_buffer(proc, NULL, buffer, false);
+	k_binder_alloc_free_buf(&proc->alloc, buffer);
 	kfree(t);
-	binder_stats_deleted(BINDER_STAT_TRANSACTION);
+	k_binder_stats_deleted(BINDER_STAT_TRANSACTION);
 }
 
 static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs* regs)
@@ -223,26 +223,26 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 	if (!node || !proc || proc->is_frozen || !(t->flags & TF_ONE_WAY))
 		return 0;
 
-	if (line_is_frozen(proc->tsk)) {
+	if (rkx_is_frozen(proc->tsk)) {
 		strategy = RKX_FREE_ASYNC_BY_CODE;
-		if (free_async_has_entries() && rkx_parse_interface_token(proc, t->buffer, rpc_name, sizeof(rpc_name)))
-			free_async_lookup_rcu(rpc_name, t->code, &strategy);
+		if (rkx_free_async_has_entries() && rkx_parse_interface_token(proc, t->buffer, rpc_name, sizeof(rpc_name)))
+			rkx_free_async_lookup_rcu(rpc_name, t->code, &strategy);
 		if (strategy == RKX_FREE_ASYNC_SKIP)
 			return 0;
 
-		binder_node_lock(node);
+		rk_binder_node_lock(node);
 		if (!node->has_async_transaction) {
-			binder_node_unlock(node);
+			rk_binder_node_unlock(node);
 			return 0;
 		}
-		binder_inner_proc_lock(proc);
-		t_outdated = binder_find_outdated_transaction_ilocked(t, &node->async_todo, strategy);
+		rk_binder_inner_proc_lock(proc);
+		t_outdated = rk_binder_find_outdated_transaction_ilocked(t, &node->async_todo, strategy);
 		if (t_outdated) {
 			list_del_init(&t_outdated->work.entry);
 			proc->outstanding_txns--;
 		}
-		binder_inner_proc_unlock(proc);
-		binder_node_unlock(node);
+		rk_binder_inner_proc_unlock(proc);
+		rk_binder_node_unlock(node);
 
 		if (t_outdated) {
 			struct binder_buffer* buffer = t_outdated->buffer;
@@ -264,9 +264,9 @@ static struct kprobe kp_binder_proc_transaction = {
 	.pre_handler = binder_proc_transaction_pre
 };
 
-static bool re_kp_binder_proc_registered;
+static bool kp_registered;
 
-void __nocfi register_binder_kp(void)
+void __nocfi rkx_register_binder_kp(void)
 {
 	int rc = LINE_SUCCESS;
 
@@ -281,20 +281,20 @@ void __nocfi register_binder_kp(void)
 		rkx_log_err("register kallsyms_lookup_name kprobe failed, rc=%d (free-async disabled)\n", rc);
 		goto err;
 	}
-	re_kallsyms_lookup_name = (void *)kp_kallsyms_lookup_name.addr;
+	k_kallsyms_lookup_name = (void *)kp_kallsyms_lookup_name.addr;
 	unregister_kprobe(&kp_kallsyms_lookup_name);
 
-	re_binder_transaction_buffer_release = (void*)re_kallsyms_lookup_name("binder_transaction_buffer_release");
-	re_binder_alloc_free_buf = (void*)re_kallsyms_lookup_name("binder_alloc_free_buf");
+	k_binder_transaction_buffer_release = (void*)k_kallsyms_lookup_name("binder_transaction_buffer_release");
+	k_binder_alloc_free_buf = (void*)k_kallsyms_lookup_name("binder_alloc_free_buf");
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
-	re_binder_alloc_copy_from_buffer = rkx_binder_copy_from_buffer;
+	k_binder_alloc_copy_from_buffer = rk_binder_alloc_copy_from_buffer;
 #else
-	re_binder_alloc_copy_from_buffer = (void *)re_kallsyms_lookup_name("binder_alloc_copy_from_buffer");
+	k_binder_alloc_copy_from_buffer = (void *)k_kallsyms_lookup_name("binder_alloc_copy_from_buffer");
 #endif
-	re_binder_stats = (void*)re_kallsyms_lookup_name("binder_stats");
+	k_binder_stats = (void*)k_kallsyms_lookup_name("binder_stats");
 
-	if (re_binder_transaction_buffer_release == NULL || re_binder_alloc_free_buf == NULL ||
-	    re_binder_alloc_copy_from_buffer == NULL || re_binder_stats == NULL) {
+	if (k_binder_transaction_buffer_release == NULL || k_binder_alloc_free_buf == NULL ||
+	    k_binder_alloc_copy_from_buffer == NULL || k_binder_stats == NULL) {
 		rkx_log_err("resolve binder symbols failed (free-async disabled)\n");
 		goto err;
 	}
@@ -304,18 +304,18 @@ void __nocfi register_binder_kp(void)
 		rkx_log_err("register binder_proc_transaction kprobe failed, rc=%d (free-async disabled)\n", rc);
 		goto err;
 	}
-	re_kp_binder_proc_registered = true;
+	kp_registered = true;
 	return;
 
 err:
-	unregister_binder_kp();
+	rkx_unregister_binder_kp();
 }
 
-void unregister_binder_kp(void)
+void rkx_unregister_binder_kp(void)
 {
-	if (re_kp_binder_proc_registered) {
+	if (kp_registered) {
 		unregister_kprobe(&kp_binder_proc_transaction);
-		re_kp_binder_proc_registered = false;
+		kp_registered = false;
 	}
 	if (rkx_free_wq) {
 		flush_workqueue(rkx_free_wq);

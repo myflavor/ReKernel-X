@@ -32,7 +32,7 @@ static inline bool rkx_is_jobctl_frozen_compatible(struct task_struct *task)
 #endif
 }
 
-bool line_is_frozen(struct task_struct *task)
+bool rkx_is_frozen(struct task_struct *task)
 {
 	if (cgroup_task_frozen(task) || rkx_is_jobctl_frozen_compatible(task))
 		return true;
