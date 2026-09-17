@@ -182,7 +182,6 @@ static inline void k_binder_stats_deleted(enum binder_stat_types type)
 static void __nocfi rk_binder_proc_dec_tmpref(struct binder_proc *proc)
 {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
-	/* 5.10 的构建可能把 binder_proc_dec_tmpref 内联掉，只有 binder_free_proc 还在 */
 	if (k_binder_proc_dec_tmpref) {
 		k_binder_proc_dec_tmpref(proc);
 		return;
