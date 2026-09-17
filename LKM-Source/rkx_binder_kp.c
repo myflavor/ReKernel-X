@@ -289,7 +289,7 @@ void __nocfi rkx_register_binder_kp(void)
 {
 	int rc = LINE_SUCCESS;
 
-	rkx_free_wq = alloc_workqueue("rkx_free_async", WQ_UNBOUND | WQ_MEM_RECLAIM, 0);
+	rkx_free_wq = alloc_workqueue("rkx_free_async", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
 	if (!rkx_free_wq) {
 		rkx_log_err("alloc free-async workqueue failed (free-async disabled)\n");
 		goto err;
