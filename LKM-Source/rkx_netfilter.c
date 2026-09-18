@@ -23,7 +23,7 @@
 #include <net/tcp.h>
 #include <linux/rcupdate.h>
 
-static inline uid_t line_sock2uid(struct sock *sk)
+static inline uid_t sock_to_uid(struct sock *sk)
 {
 	if (sk && sk->sk_socket)
 		return SOCK_INODE(sk->sk_socket)->i_uid.val;
@@ -115,12 +115,12 @@ static unsigned int rkx_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
 	if (!sk || !sk_fullsock(sk))
 		return NF_ACCEPT;
 
-	uid = line_sock2uid(sk);
+	uid = sock_to_uid(sk);
 	if (uid < MIN_USERAPP_UID)
 		return NF_ACCEPT;
 
 	rcu_read_lock();
-	if (!net_uid_monitored_rcu(uid)) {
+	if (!rkx_net_uid_monitored_rcu(uid)) {
 		rcu_read_unlock();
 		return NF_ACCEPT;
 	}
@@ -148,7 +148,7 @@ static unsigned int rkx_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
 				.data_len = data_len,
 			},
 		};
-		sendMessage(&event);
+		rkx_send_message(&event);
 	}
 
 	return NF_ACCEPT;
@@ -172,7 +172,7 @@ static struct nf_hook_ops rkx_nf_ops[] = {
 #endif
 };
 
-static bool re_netfilter_registered;
+static bool netfilter_registered;
 
 static void __unregister_netfilter(void)
 {
@@ -185,15 +185,15 @@ static void __unregister_netfilter(void)
 	rtnl_unlock();
 }
 
-void unregister_netfilter(void)
+void rkx_unregister_netfilter(void)
 {
-	if (re_netfilter_registered) {
+	if (netfilter_registered) {
 		__unregister_netfilter();
-		re_netfilter_registered = false;
+		netfilter_registered = false;
 	}
 }
 
-int register_netfilter(void)
+int rkx_register_netfilter(void)
 {
 	int rc = LINE_SUCCESS;
 	struct net *net = NULL;
@@ -213,6 +213,6 @@ int register_netfilter(void)
 		return LINE_ERROR;
 	}
 
-	re_netfilter_registered = true;
+	netfilter_registered = true;
 	return LINE_SUCCESS;
 }

@@ -34,7 +34,7 @@ static int rkx_genl_monitor_net(struct sk_buff *skb, struct genl_info *info)
 
     muid = (uid_t)nla_get_u32(info->attrs[RKX_A_UID]);
     rkx_log_debug("addMonitorUid uid=%d\n", muid);
-    add_net_uid(muid);
+    rkx_add_net_uid(muid);
     return 0;
 }
 
@@ -49,7 +49,7 @@ static int rkx_genl_del_monitor_net(struct sk_buff *skb, struct genl_info *info)
 
     muid = (uid_t)nla_get_u32(info->attrs[RKX_A_UID]);
     rkx_log_debug("delMonitorNet uid=%d\n", muid);
-    del_net_uid(muid);
+    rkx_del_net_uid(muid);
     return 0;
 }
 
@@ -71,7 +71,7 @@ static int rkx_genl_add_free_async(struct sk_buff *skb, struct genl_info *info)
     code = nla_get_s32(info->attrs[RKX_A_FREE_ASYNC_CODE]);
     strategy = nla_get_u8(info->attrs[RKX_A_FREE_ASYNC_STRATEGY]);
 
-    rc = add_free_async(rpc_name, code, strategy);
+    rc = rkx_add_free_async(rpc_name, code, strategy);
     if (rc)
         return rc;
     return 0;
@@ -92,7 +92,7 @@ static int rkx_genl_del_free_async(struct sk_buff *skb, struct genl_info *info)
     rpc_name = nla_data(info->attrs[RKX_A_FREE_ASYNC_RPC_NAME]);
     code = nla_get_s32(info->attrs[RKX_A_FREE_ASYNC_CODE]);
 
-    rc = del_free_async(rpc_name, code);
+    rc = rkx_del_free_async(rpc_name, code);
     if (rc)
         return rc;
     return 0;
@@ -141,7 +141,7 @@ static struct genl_family rkx_genl_family = {
     .n_mcgrps = ARRAY_SIZE(rkx_genl_mcgrps),
 };
 
-int sendMessage(struct rkx_event *event)
+int rkx_send_message(struct rkx_event *event)
 {
     struct sk_buff *skb;
     void *msg_head;
@@ -239,11 +239,11 @@ int sendMessage(struct rkx_event *event)
 nla_fail:
     genlmsg_cancel(skb, msg_head);
     nlmsg_free(skb);
-    rkx_log_err("sendMessage: nla_put failed\n");
+    rkx_log_err("rkx_send_message: nla_put failed\n");
     return LINE_ERROR;
 }
 
-int register_genl(void)
+int rkx_register_genl(void)
 {
     rkx_log_info("Trying to register Generic Netlink family......\n");
 
@@ -258,7 +258,7 @@ int register_genl(void)
     return LINE_SUCCESS;
 }
 
-void unregister_genl(void)
+void rkx_unregister_genl(void)
 {
     if (rkx_genl_registered)
     {

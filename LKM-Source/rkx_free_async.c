@@ -44,19 +44,19 @@ static bool free_async_strategy_valid(u8 strategy)
 	       strategy == RKX_FREE_ASYNC_BY_DATA;
 }
 
-bool free_async_has_entries(void)
+bool rkx_free_async_has_entries(void)
 {
 	return atomic_read(&rkx_free_async_count) > 0;
 }
 
-bool free_async_lookup_rcu(const char *rpc_name, s32 code, u8 *strategy_out)
+bool rkx_free_async_lookup_rcu(const char *rpc_name, s32 code, u8 *strategy_out)
 {
 	struct free_async_entry *entry;
 	u32 key;
 	u8 exact_strategy = 0;
 	u8 wild_strategy = 0;
 
-	if (!rpc_name || !strategy_out || !free_async_has_entries())
+	if (!rpc_name || !strategy_out || !rkx_free_async_has_entries())
 		return false;
 
 	key = free_async_hash(rpc_name);
@@ -85,7 +85,7 @@ bool free_async_lookup_rcu(const char *rpc_name, s32 code, u8 *strategy_out)
 	return false;
 }
 
-int add_free_async(const char *rpc_name, s32 code, u8 strategy)
+int rkx_add_free_async(const char *rpc_name, s32 code, u8 strategy)
 {
 	struct free_async_entry *entry;
 	size_t len;
@@ -128,7 +128,7 @@ int add_free_async(const char *rpc_name, s32 code, u8 strategy)
 	return 0;
 }
 
-int del_free_async(const char *rpc_name, s32 code)
+int rkx_del_free_async(const char *rpc_name, s32 code)
 {
 	struct free_async_entry *entry;
 	u32 key;
@@ -156,7 +156,7 @@ int del_free_async(const char *rpc_name, s32 code)
 	return 0;
 }
 
-void destroy_free_async(void)
+void rkx_destroy_free_async(void)
 {
 	struct free_async_entry *entry;
 	struct hlist_node *tmp;
@@ -172,7 +172,7 @@ void destroy_free_async(void)
 	rcu_barrier();
 }
 
-void init_free_async(void)
+void rkx_init_free_async(void)
 {
 	hash_init(rkx_free_async_map);
 	atomic_set(&rkx_free_async_count, 0);

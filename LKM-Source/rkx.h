@@ -153,42 +153,42 @@ struct rkx_event
 
 // genl.c
 bool rkx_netlink_ready(void);
-int sendMessage(struct rkx_event *event);
-int register_genl(void);
-void unregister_genl(void);
+int rkx_send_message(struct rkx_event *event);
+int rkx_register_genl(void);
+void rkx_unregister_genl(void);
 
 // net_uid.c
-bool net_uid_monitored_rcu(uid_t uid);
-void add_net_uid(uid_t uid);
-void del_net_uid(uid_t uid);
-void init_net_uid(void);
-void destroy_net_uid(void);
+bool rkx_net_uid_monitored_rcu(uid_t uid);
+void rkx_add_net_uid(uid_t uid);
+void rkx_del_net_uid(uid_t uid);
+void rkx_init_net_uid(void);
+void rkx_destroy_net_uid(void);
 
 // free_async.c
-bool free_async_has_entries(void);
-bool free_async_lookup_rcu(const char *rpc_name, s32 code, u8 *strategy_out);
-int add_free_async(const char *rpc_name, s32 code, u8 strategy);
-int del_free_async(const char *rpc_name, s32 code);
-void init_free_async(void);
-void destroy_free_async(void);
+bool rkx_free_async_has_entries(void);
+bool rkx_free_async_lookup_rcu(const char *rpc_name, s32 code, u8 *strategy_out);
+int rkx_add_free_async(const char *rpc_name, s32 code, u8 strategy);
+int rkx_del_free_async(const char *rpc_name, s32 code);
+void rkx_init_free_async(void);
+void rkx_destroy_free_async(void);
 
 // frozen.c
-bool line_is_frozen(struct task_struct *task);
+bool rkx_is_frozen(struct task_struct *task);
 
 // binder.c
-int register_binder(void);
-void unregister_binder(void);
+int rkx_register_binder(void);
+void rkx_unregister_binder(void);
 
 // signal.c
-int register_signal(void);
-void unregister_signal(void);
+int rkx_register_signal(void);
+void rkx_unregister_signal(void);
 
 // netfilter.c
-int register_netfilter(void);
-void unregister_netfilter(void);
+int rkx_register_netfilter(void);
+void rkx_unregister_netfilter(void);
 
 // binder_kp.c
-void register_binder_kp(void);
-void unregister_binder_kp(void);
+void rkx_register_binder_kp(void);
+void rkx_unregister_binder_kp(void);
 
 #endif
