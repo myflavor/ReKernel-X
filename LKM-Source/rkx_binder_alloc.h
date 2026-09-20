@@ -6,7 +6,7 @@
 #include "../android/binder_internal.h"
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
-int rkx_binder_copy_from_buffer(struct binder_alloc *alloc, void *dest,
+int rk_binder_alloc_copy_from_buffer(struct binder_alloc *alloc, void *dest,
 	struct binder_buffer *buffer, binder_size_t buffer_offset, size_t bytes);
 #endif
 

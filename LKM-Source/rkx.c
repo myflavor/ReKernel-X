@@ -11,16 +11,16 @@
 #include <linux/init.h>
 #include <linux/tracepoint.h>
 
-static int __init start_rekernel(void)
+static int __init rkx_init(void)
 {
 	rkx_log_info("starting...\n");
 	rkx_log_debug("Debug mode is enabled!\n");
 	rkx_log_info("Version %s |  by myflavor, Sakion Team\n", RKX_VERSION);
 
-	init_net_uid();
-	init_free_async();
+	rkx_init_net_uid();
+	rkx_init_free_async();
 
-	if (register_genl() != LINE_SUCCESS)
+	if (rkx_register_genl() != RKX_SUCCESS)
 	{
 		rkx_log_err("%s: Failed to register genl family!\n", __func__);
 		goto err;
@@ -28,55 +28,55 @@ static int __init start_rekernel(void)
 
 	rkx_log_info("start hooking!\n");
 
-	if (register_binder() != LINE_SUCCESS)
+	if (rkx_register_binder() != RKX_SUCCESS)
 	{
 		rkx_log_err("%s: Failed to hook binder!\n", __func__);
 		goto err;
 	}
 
-	if (register_signal() != LINE_SUCCESS)
+	if (rkx_register_signal() != RKX_SUCCESS)
 	{
 		rkx_log_err("%s: Failed to hook signal!\n", __func__);
 		goto err;
 	}
 
-	if (register_netfilter() != LINE_SUCCESS)
+	if (rkx_register_netfilter() != RKX_SUCCESS)
 	{
 		rkx_log_err("%s: Failed to hook netfilter!\n", __func__);
 		goto err;
 	}
 
-	register_binder_kp();
+	rkx_register_binder_kp();
 
 	rkx_log_info("hooked!\n");
-	return LINE_SUCCESS;
+	return RKX_SUCCESS;
 
 err:
-	unregister_binder_kp();
-	unregister_netfilter();
-	unregister_signal();
-	unregister_binder();
+	rkx_unregister_binder_kp();
+	rkx_unregister_netfilter();
+	rkx_unregister_signal();
+	rkx_unregister_binder();
 	tracepoint_synchronize_unregister();
-	unregister_genl();
-	destroy_free_async();
-	destroy_net_uid();
-	return LINE_ERROR;
+	rkx_unregister_genl();
+	rkx_destroy_free_async();
+	rkx_destroy_net_uid();
+	return RKX_ERROR;
 }
 
-static void __exit exit_rekernel(void)
+static void __exit rkx_exit(void)
 {
 	rkx_log_info("closing...\n");
-	unregister_binder_kp();
-	unregister_netfilter();
-	unregister_signal();
-	unregister_binder();
+	rkx_unregister_binder_kp();
+	rkx_unregister_netfilter();
+	rkx_unregister_signal();
+	rkx_unregister_binder();
 	tracepoint_synchronize_unregister();
-	unregister_genl();
-	destroy_free_async();
-	destroy_net_uid();
+	rkx_unregister_genl();
+	rkx_destroy_free_async();
+	rkx_destroy_net_uid();
 }
 
-module_init(start_rekernel);
-module_exit(exit_rekernel);
+module_init(rkx_init);
+module_exit(rkx_exit);
 
 MODULE_LICENSE("GPL");

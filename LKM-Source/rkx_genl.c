@@ -34,7 +34,7 @@ static int rkx_genl_monitor_net(struct sk_buff *skb, struct genl_info *info)
 
     muid = (uid_t)nla_get_u32(info->attrs[RKX_A_UID]);
     rkx_log_debug("addMonitorUid uid=%d\n", muid);
-    add_net_uid(muid);
+    rkx_add_net_uid(muid);
     return 0;
 }
 
@@ -49,7 +49,7 @@ static int rkx_genl_del_monitor_net(struct sk_buff *skb, struct genl_info *info)
 
     muid = (uid_t)nla_get_u32(info->attrs[RKX_A_UID]);
     rkx_log_debug("delMonitorNet uid=%d\n", muid);
-    del_net_uid(muid);
+    rkx_del_net_uid(muid);
     return 0;
 }
 
@@ -71,7 +71,7 @@ static int rkx_genl_add_free_async(struct sk_buff *skb, struct genl_info *info)
     code = nla_get_s32(info->attrs[RKX_A_FREE_ASYNC_CODE]);
     strategy = nla_get_u8(info->attrs[RKX_A_FREE_ASYNC_STRATEGY]);
 
-    rc = add_free_async(rpc_name, code, strategy);
+    rc = rkx_add_free_async(rpc_name, code, strategy);
     if (rc)
         return rc;
     return 0;
@@ -92,7 +92,7 @@ static int rkx_genl_del_free_async(struct sk_buff *skb, struct genl_info *info)
     rpc_name = nla_data(info->attrs[RKX_A_FREE_ASYNC_RPC_NAME]);
     code = nla_get_s32(info->attrs[RKX_A_FREE_ASYNC_CODE]);
 
-    rc = del_free_async(rpc_name, code);
+    rc = rkx_del_free_async(rpc_name, code);
     if (rc)
         return rc;
     return 0;
@@ -102,7 +102,7 @@ static const struct nla_policy rkx_genl_policy[RKX_A_MAX + 1] = {
     [RKX_A_EVENT] = {.type = NLA_NESTED},
     [RKX_A_UID] = {.type = NLA_U32},
     [RKX_A_FREE_ASYNC_STRATEGY] = {.type = NLA_U8},
-    [RKX_A_FREE_ASYNC_RPC_NAME] = {.type = NLA_NUL_STRING, .len = INTERFACETOKEN_BUFF_SIZE - 1},
+    [RKX_A_FREE_ASYNC_RPC_NAME] = {.type = NLA_NUL_STRING, .len = RKX_INTERFACETOKEN_BUFF_SIZE - 1},
     [RKX_A_FREE_ASYNC_CODE] = {.type = NLA_S32},
 };
 
@@ -141,7 +141,7 @@ static struct genl_family rkx_genl_family = {
     .n_mcgrps = ARRAY_SIZE(rkx_genl_mcgrps),
 };
 
-int sendMessage(struct rkx_event *event)
+int rkx_send_message(struct rkx_event *event)
 {
     struct sk_buff *skb;
     void *msg_head;
@@ -152,7 +152,7 @@ int sendMessage(struct rkx_event *event)
     if (!skb)
     {
         rkx_log_err("genlmsg alloc failure!\n");
-        return LINE_ERROR;
+        return RKX_ERROR;
     }
 
     msg_head = genlmsg_put(skb, 0, 0, &rkx_genl_family, 0, RKX_C_EVENT);
@@ -160,7 +160,7 @@ int sendMessage(struct rkx_event *event)
     {
         rkx_log_err("genlmsg_put failure!\n");
         nlmsg_free(skb);
-        return LINE_ERROR;
+        return RKX_ERROR;
     }
 
     evt = nla_nest_start(skb, RKX_A_EVENT);
@@ -231,34 +231,34 @@ int sendMessage(struct rkx_event *event)
     if (rc && rc != -ESRCH)
     {
         rkx_log_err("genlmsg_multicast failed, rc=%d\n", rc);
-        return LINE_ERROR;
+        return RKX_ERROR;
     }
 
-    return LINE_SUCCESS;
+    return RKX_SUCCESS;
 
 nla_fail:
     genlmsg_cancel(skb, msg_head);
     nlmsg_free(skb);
-    rkx_log_err("sendMessage: nla_put failed\n");
-    return LINE_ERROR;
+    rkx_log_err("rkx_send_message: nla_put failed\n");
+    return RKX_ERROR;
 }
 
-int register_genl(void)
+int rkx_register_genl(void)
 {
     rkx_log_info("Trying to register Generic Netlink family......\n");
 
     if (genl_register_family(&rkx_genl_family) != 0)
     {
         rkx_log_err("Failed to register genl family!\n");
-        return LINE_ERROR;
+        return RKX_ERROR;
     }
     rkx_genl_registered = true;
 
     rkx_log_info("Registered genl family! ID: %d\n", rkx_genl_family.id);
-    return LINE_SUCCESS;
+    return RKX_SUCCESS;
 }
 
-void unregister_genl(void)
+void rkx_unregister_genl(void)
 {
     if (rkx_genl_registered)
     {

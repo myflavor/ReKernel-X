@@ -19,7 +19,7 @@
 /* hashmap for net monitor uids */
 #define RKX_NET_UID_HASH_BITS 6
 static DEFINE_HASHTABLE(rkx_net_uid_map, RKX_NET_UID_HASH_BITS);
-struct uid_info {
+struct rkx_uid_info {
 	uid_t uid;
 	struct hlist_node hnode;
 	struct rcu_head rcu;
@@ -27,9 +27,9 @@ struct uid_info {
 
 static DEFINE_MUTEX(rkx_net_uid_mutex);
 
-bool net_uid_monitored_rcu(uid_t uid)
+bool rkx_net_uid_monitored_rcu(uid_t uid)
 {
-	struct uid_info *entry;
+	struct rkx_uid_info *entry;
 	bool found = false;
 
 	hash_for_each_possible_rcu(rkx_net_uid_map, entry, hnode, uid) {
@@ -42,9 +42,9 @@ bool net_uid_monitored_rcu(uid_t uid)
 }
 
 /* add a uid to the monitor map (no-op if already present). Caller must NOT hold the mutex. */
-void add_net_uid(uid_t uid)
+void rkx_add_net_uid(uid_t uid)
 {
-	struct uid_info *entry;
+	struct rkx_uid_info *entry;
 	bool found = false;
 
 	mutex_lock(&rkx_net_uid_mutex);
@@ -65,9 +65,9 @@ void add_net_uid(uid_t uid)
 }
 
 /* remove a uid from the monitor map. Caller must NOT hold the mutex. */
-void del_net_uid(uid_t uid)
+void rkx_del_net_uid(uid_t uid)
 {
-	struct uid_info *entry;
+	struct rkx_uid_info *entry;
 
 	mutex_lock(&rkx_net_uid_mutex);
 	hash_for_each_possible(rkx_net_uid_map, entry, hnode, uid) {
@@ -80,9 +80,9 @@ void del_net_uid(uid_t uid)
 	mutex_unlock(&rkx_net_uid_mutex);
 }
 
-void destroy_net_uid(void)
+void rkx_destroy_net_uid(void)
 {
-	struct uid_info *entry;
+	struct rkx_uid_info *entry;
 	struct hlist_node *tmp;
 	int bkt;
 
@@ -94,7 +94,7 @@ void destroy_net_uid(void)
 	mutex_unlock(&rkx_net_uid_mutex);
 }
 
-void init_net_uid(void)
+void rkx_init_net_uid(void)
 {
 	hash_init(rkx_net_uid_map);
 }

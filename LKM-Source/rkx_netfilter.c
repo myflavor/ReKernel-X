@@ -23,7 +23,7 @@
 #include <net/tcp.h>
 #include <linux/rcupdate.h>
 
-static inline uid_t line_sock2uid(struct sock *sk)
+static inline uid_t rkx_sock_to_uid(struct sock *sk)
 {
 	if (sk && sk->sk_socket)
 		return SOCK_INODE(sk->sk_socket)->i_uid.val;
@@ -35,7 +35,7 @@ static inline uid_t line_sock2uid(struct sock *sk)
  * Parse TCP payload length from an IPv4 packet.
  * Returns 0 on success, -1 if the packet should be passed through.
  */
-static int parse_tcp_ipv4(struct sk_buff *skb, __u8 *proto, int *data_len)
+static int rkx_parse_tcp_ipv4(struct sk_buff *skb, __u8 *proto, int *data_len)
 {
 	struct iphdr *iph;
 	unsigned int ip_hdr_len;
@@ -68,7 +68,7 @@ static int parse_tcp_ipv4(struct sk_buff *skb, __u8 *proto, int *data_len)
  * Parse TCP payload length from an IPv6 packet.
  * Returns 0 on success, -1 if the packet should be passed through.
  */
-static int parse_tcp_ipv6(struct sk_buff *skb, __u8 *proto, int *data_len)
+static int rkx_parse_tcp_ipv6(struct sk_buff *skb, __u8 *proto, int *data_len)
 {
 	unsigned int thoff = 0;
 	unsigned short frag_off = 0;
@@ -97,7 +97,7 @@ static int parse_tcp_ipv6(struct sk_buff *skb, __u8 *proto, int *data_len)
 }
 #endif
 
-static unsigned int rkx_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
+static unsigned int rkx_nf_local_in(void *priv, struct sk_buff *skb,
 	const struct nf_hook_state *state)
 {
 	struct sock *sk;
@@ -115,23 +115,23 @@ static unsigned int rkx_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
 	if (!sk || !sk_fullsock(sk))
 		return NF_ACCEPT;
 
-	uid = line_sock2uid(sk);
-	if (uid < MIN_USERAPP_UID)
+	uid = rkx_sock_to_uid(sk);
+	if (uid < RKX_MIN_APP_UID)
 		return NF_ACCEPT;
 
 	rcu_read_lock();
-	if (!net_uid_monitored_rcu(uid)) {
+	if (!rkx_net_uid_monitored_rcu(uid)) {
 		rcu_read_unlock();
 		return NF_ACCEPT;
 	}
 	rcu_read_unlock();
 
 	if (ip_hdr(skb)->version == 4) {
-		if (parse_tcp_ipv4(skb, &proto, &data_len) < 0)
+		if (rkx_parse_tcp_ipv4(skb, &proto, &data_len) < 0)
 			return NF_ACCEPT;
 #if IS_ENABLED(CONFIG_IPV6)
 	} else if (ip_hdr(skb)->version == 6) {
-		if (parse_tcp_ipv6(skb, &proto, &data_len) < 0)
+		if (rkx_parse_tcp_ipv6(skb, &proto, &data_len) < 0)
 			return NF_ACCEPT;
 #endif
 	} else {
@@ -148,7 +148,7 @@ static unsigned int rkx_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
 				.data_len = data_len,
 			},
 		};
-		sendMessage(&event);
+		rkx_send_message(&event);
 	}
 
 	return NF_ACCEPT;
@@ -157,14 +157,14 @@ static unsigned int rkx_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
 /* Only monitor input network packages */
 static struct nf_hook_ops rkx_nf_ops[] = {
 	{
-		.hook     = rkx_pkg_ipv4_ipv6_in,
+		.hook     = rkx_nf_local_in,
 		.pf       = NFPROTO_IPV4,
 		.hooknum  = NF_INET_LOCAL_IN,
 		.priority = NF_IP_PRI_SELINUX_LAST + 1,
 	},
 #if IS_ENABLED(CONFIG_IPV6)
 	{
-		.hook     = rkx_pkg_ipv4_ipv6_in,
+		.hook     = rkx_nf_local_in,
 		.pf       = NFPROTO_IPV6,
 		.hooknum  = NF_INET_LOCAL_IN,
 		.priority = NF_IP6_PRI_SELINUX_LAST + 1,
@@ -172,9 +172,9 @@ static struct nf_hook_ops rkx_nf_ops[] = {
 #endif
 };
 
-static bool re_netfilter_registered;
+static bool rkx_netfilter_registered;
 
-static void __unregister_netfilter(void)
+static void rkx_unregister_netfilter_hooks(void)
 {
 	struct net *net;
 
@@ -185,34 +185,34 @@ static void __unregister_netfilter(void)
 	rtnl_unlock();
 }
 
-void unregister_netfilter(void)
+void rkx_unregister_netfilter(void)
 {
-	if (re_netfilter_registered) {
-		__unregister_netfilter();
-		re_netfilter_registered = false;
+	if (rkx_netfilter_registered) {
+		rkx_unregister_netfilter_hooks();
+		rkx_netfilter_registered = false;
 	}
 }
 
-int register_netfilter(void)
+int rkx_register_netfilter(void)
 {
-	int rc = LINE_SUCCESS;
+	int rc = RKX_SUCCESS;
 	struct net *net = NULL;
 
 	rtnl_lock();
 	for_each_net(net) {
 		rc = nf_register_net_hooks(net, rkx_nf_ops, ARRAY_SIZE(rkx_nf_ops));
-		if (rc != LINE_SUCCESS) {
+		if (rc != RKX_SUCCESS) {
 			rkx_log_err("register netfilter hooks failed, rc=%d\n", rc);
 			break;
 		}
 	}
 	rtnl_unlock();
 
-	if (rc != LINE_SUCCESS) {
-		__unregister_netfilter();
-		return LINE_ERROR;
+	if (rc != RKX_SUCCESS) {
+		rkx_unregister_netfilter_hooks();
+		return RKX_ERROR;
 	}
 
-	re_netfilter_registered = true;
-	return LINE_SUCCESS;
+	rkx_netfilter_registered = true;
+	return RKX_SUCCESS;
 }

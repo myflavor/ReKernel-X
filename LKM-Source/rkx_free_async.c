@@ -20,8 +20,8 @@
 
 #define RKX_FREE_ASYNC_HASH_BITS 6
 
-struct free_async_entry {
-	char rpc_name[INTERFACETOKEN_BUFF_SIZE];
+struct rkx_free_async_entry {
+	char rpc_name[RKX_INTERFACETOKEN_BUFF_SIZE];
 	s32 code;
 	u8 strategy;
 	struct hlist_node hnode;
@@ -32,34 +32,34 @@ static DEFINE_HASHTABLE(rkx_free_async_map, RKX_FREE_ASYNC_HASH_BITS);
 static DEFINE_MUTEX(rkx_free_async_mutex);
 static atomic_t rkx_free_async_count = ATOMIC_INIT(0);
 
-static inline u32 free_async_hash(const char *rpc_name)
+static inline u32 rkx_free_async_hash(const char *rpc_name)
 {
 	return jhash(rpc_name, strlen(rpc_name), 0);
 }
 
-static bool free_async_strategy_valid(u8 strategy)
+static bool rkx_free_async_strategy_valid(u8 strategy)
 {
 	return strategy == RKX_FREE_ASYNC_SKIP ||
 	       strategy == RKX_FREE_ASYNC_BY_CODE ||
 	       strategy == RKX_FREE_ASYNC_BY_DATA;
 }
 
-bool free_async_has_entries(void)
+bool rkx_free_async_has_entries(void)
 {
 	return atomic_read(&rkx_free_async_count) > 0;
 }
 
-bool free_async_lookup_rcu(const char *rpc_name, s32 code, u8 *strategy_out)
+bool rkx_free_async_lookup_rcu(const char *rpc_name, s32 code, u8 *strategy_out)
 {
-	struct free_async_entry *entry;
+	struct rkx_free_async_entry *entry;
 	u32 key;
 	u8 exact_strategy = 0;
 	u8 wild_strategy = 0;
 
-	if (!rpc_name || !strategy_out || !free_async_has_entries())
+	if (!rpc_name || !strategy_out || !rkx_free_async_has_entries())
 		return false;
 
-	key = free_async_hash(rpc_name);
+	key = rkx_free_async_hash(rpc_name);
 
 	rcu_read_lock();
 	hash_for_each_possible_rcu(rkx_free_async_map, entry, hnode, key) {
@@ -85,21 +85,21 @@ bool free_async_lookup_rcu(const char *rpc_name, s32 code, u8 *strategy_out)
 	return false;
 }
 
-int add_free_async(const char *rpc_name, s32 code, u8 strategy)
+int rkx_add_free_async(const char *rpc_name, s32 code, u8 strategy)
 {
-	struct free_async_entry *entry;
+	struct rkx_free_async_entry *entry;
 	size_t len;
 	u32 key;
 	bool found = false;
 
-	if (!rpc_name || !*rpc_name || code < -1 || !free_async_strategy_valid(strategy))
+	if (!rpc_name || !*rpc_name || code < -1 || !rkx_free_async_strategy_valid(strategy))
 		return -EINVAL;
 
-	len = strnlen(rpc_name, INTERFACETOKEN_BUFF_SIZE);
-	if (len == 0 || len >= INTERFACETOKEN_BUFF_SIZE)
+	len = strnlen(rpc_name, RKX_INTERFACETOKEN_BUFF_SIZE);
+	if (len == 0 || len >= RKX_INTERFACETOKEN_BUFF_SIZE)
 		return -EINVAL;
 
-	key = free_async_hash(rpc_name);
+	key = rkx_free_async_hash(rpc_name);
 
 	mutex_lock(&rkx_free_async_mutex);
 	hash_for_each_possible(rkx_free_async_map, entry, hnode, key) {
@@ -128,16 +128,16 @@ int add_free_async(const char *rpc_name, s32 code, u8 strategy)
 	return 0;
 }
 
-int del_free_async(const char *rpc_name, s32 code)
+int rkx_del_free_async(const char *rpc_name, s32 code)
 {
-	struct free_async_entry *entry;
+	struct rkx_free_async_entry *entry;
 	u32 key;
 	bool found = false;
 
 	if (!rpc_name || !*rpc_name || code < -1)
 		return -EINVAL;
 
-	key = free_async_hash(rpc_name);
+	key = rkx_free_async_hash(rpc_name);
 
 	mutex_lock(&rkx_free_async_mutex);
 	hash_for_each_possible(rkx_free_async_map, entry, hnode, key) {
@@ -156,9 +156,9 @@ int del_free_async(const char *rpc_name, s32 code)
 	return 0;
 }
 
-void destroy_free_async(void)
+void rkx_destroy_free_async(void)
 {
-	struct free_async_entry *entry;
+	struct rkx_free_async_entry *entry;
 	struct hlist_node *tmp;
 	int bkt;
 
@@ -172,7 +172,7 @@ void destroy_free_async(void)
 	rcu_barrier();
 }
 
-void init_free_async(void)
+void rkx_init_free_async(void)
 {
 	hash_init(rkx_free_async_map);
 	atomic_set(&rkx_free_async_count, 0);

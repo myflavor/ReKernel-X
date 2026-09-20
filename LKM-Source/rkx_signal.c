@@ -14,14 +14,14 @@
 #include <linux/sched/signal.h>
 #include <trace/hooks/signal.h>
 
-static bool re_signal_hook;
+static bool rkx_signal_hooked;
 
-static void line_signal(void *data, int sig, struct task_struct *killer, struct task_struct *dst)
+static void rkx_do_send_sig_info_vh(void *data, int sig, struct task_struct *killer, struct task_struct *dst)
 {
 	if (!dst || !killer)
 		return;
 
-	if (line_is_frozen(dst) &&
+	if (rkx_is_frozen(dst) &&
 			(sig == SIGKILL
 			|| sig == SIGTERM
 			|| sig == SIGABRT
@@ -38,28 +38,28 @@ static void line_signal(void *data, int sig, struct task_struct *killer, struct 
 					.dst_uid = task_uid(dst).val,
 				},
 			};
-			sendMessage(&event);
+			rkx_send_message(&event);
 		}
 	}
 }
 
-int register_signal(void)
+int rkx_register_signal(void)
 {
-	int rc = LINE_SUCCESS;
+	int rc = RKX_SUCCESS;
 
-	rc = register_trace_android_vh_do_send_sig_info(line_signal, NULL);
-	if (rc != LINE_SUCCESS) {
+	rc = register_trace_android_vh_do_send_sig_info(rkx_do_send_sig_info_vh, NULL);
+	if (rc != RKX_SUCCESS) {
 		rkx_log_err("register_trace_android_vh_do_send_sig_info failed, rc=%d\n", rc);
 		return rc;
 	}
-	re_signal_hook = true;
-	return LINE_SUCCESS;
+	rkx_signal_hooked = true;
+	return RKX_SUCCESS;
 }
 
-void unregister_signal(void)
+void rkx_unregister_signal(void)
 {
-	if (re_signal_hook) {
-		unregister_trace_android_vh_do_send_sig_info(line_signal, NULL);
-		re_signal_hook = false;
+	if (rkx_signal_hooked) {
+		unregister_trace_android_vh_do_send_sig_info(rkx_do_send_sig_info_vh, NULL);
+		rkx_signal_hooked = false;
 	}
 }
