@@ -43,4 +43,13 @@ public interface ReKernelXCallback {
      */
     void network(int proto, int targetUid, int dataLen);
 
+    /**
+     * Data arrived on a Bluetooth socket handed to the monitored app
+     * (e.g. the WeChat watch channel). Fires even while the app is frozen.
+     *
+     * @param targetUid uid being monitored
+     * @param dataLen   bytes currently queued on the socket
+     */
+    void bluetooth(int targetUid, int dataLen);
+
 }

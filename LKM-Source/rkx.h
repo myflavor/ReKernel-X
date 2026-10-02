@@ -15,6 +15,7 @@ struct task_struct;
 
 #define RKX_MAX_SYSTEM_UID (2000)
 #define RKX_MIN_APP_UID (10000)
+#define RKX_AID_BLUETOOTH (1002) /* the bluetooth stack process */
 #define RKX_RESERVE_ORDER 17
 #define RKX_WARN_AHEAD_SPACE (1 << RKX_RESERVE_ORDER)
 #define RKX_INTERFACETOKEN_BUFF_SIZE (140)
@@ -33,6 +34,8 @@ enum rkx_genl_cmd
 	RKX_C_DEL_MONITOR_NET, // user -> kernel
 	RKX_C_ADD_FREE_ASYNC,  // user -> kernel
 	RKX_C_DEL_FREE_ASYNC,  // user -> kernel
+	RKX_C_ADD_MONITOR_BT,  // user -> kernel
+	RKX_C_DEL_MONITOR_BT,  // user -> kernel
 	__RKX_C_MAX,
 };
 #define RKX_C_MAX (__RKX_C_MAX - 1)
@@ -77,7 +80,12 @@ enum rkx_genl_attr
 	RKX_A_FREE_ASYNC_RPC_NAME = 42, // nul_str
 	RKX_A_FREE_ASYNC_CODE = 43,     // s32
 
-	__RKX_A_MAX = 49,
+	// bluetooth
+	RKX_A_BLUETOOTH = 50,            // nested
+	RKX_A_BLUETOOTH_TARGET_UID = 51, // s32
+	RKX_A_BLUETOOTH_DATA_LEN = 52,   // s32
+
+	__RKX_A_MAX = 59,
 };
 #define RKX_A_MAX __RKX_A_MAX
 
@@ -95,6 +103,7 @@ enum rkx_event_type
 	RKX_EVT_BINDER = 1,
 	RKX_EVT_SIGNAL = 2,
 	RKX_EVT_NETWORK = 3,
+	RKX_EVT_BLUETOOTH = 4,
 };
 
 // binder type
@@ -140,6 +149,12 @@ struct rkx_network_event
 	__s32 data_len;
 };
 
+struct rkx_bluetooth_event
+{
+	__u32 target_uid;
+	__s32 data_len;
+};
+
 struct rkx_event
 {
 	__u8 type;
@@ -148,6 +163,7 @@ struct rkx_event
 		struct rkx_binder_event binder;
 		struct rkx_signal_event signal;
 		struct rkx_network_event network;
+		struct rkx_bluetooth_event bluetooth;
 	} u;
 };
 
@@ -190,5 +206,14 @@ void rkx_unregister_netfilter(void);
 // binder_kp.c
 void rkx_register_binder_kp(void);
 void rkx_unregister_binder_kp(void);
+
+// btsock.c
+bool rkx_bt_uid_monitored_rcu(uid_t uid);
+void rkx_add_bt_uid(uid_t uid);
+void rkx_del_bt_uid(uid_t uid);
+void rkx_init_btsock(void);
+void rkx_destroy_btsock(void);
+void rkx_register_btsock(void);
+void rkx_unregister_btsock(void);
 
 #endif

@@ -10,6 +10,7 @@
 - `rkx_signal.c`：信号钩子
 - `rkx_netfilter.c`：网络钩子
 - `rkx_netuid.c`：网络监控 UID 管理
+- `rkx_btsock.c`：蓝牙 socket 学习/事件/清理（kprobe）
 - `rkx_frozen.c`：进程冻结状态判断
 - `rkx.h`：公共头文件与 ABI 定义
 - `rkx_log.h`：日志宏

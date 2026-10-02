@@ -19,6 +19,8 @@ enum rkx_genl_cmd
     RKX_C_DEL_MONITOR_NET, // user -> kernel
     RKX_C_ADD_FREE_ASYNC,  // user -> kernel
     RKX_C_DEL_FREE_ASYNC,  // user -> kernel
+    RKX_C_ADD_MONITOR_BT,  // user -> kernel
+    RKX_C_DEL_MONITOR_BT,  // user -> kernel
     __RKX_C_MAX,
 };
 #define RKX_C_MAX (__RKX_C_MAX - 1)
@@ -63,7 +65,12 @@ enum rkx_genl_attr
     RKX_A_FREE_ASYNC_RPC_NAME = 42, // nul_str
     RKX_A_FREE_ASYNC_CODE = 43,     // s32
 
-    __RKX_A_MAX = 49,
+    // bluetooth
+    RKX_A_BLUETOOTH = 50,            // nested
+    RKX_A_BLUETOOTH_TARGET_UID = 51, // s32
+    RKX_A_BLUETOOTH_DATA_LEN = 52,   // s32
+
+    __RKX_A_MAX = 59,
 };
 #define RKX_A_MAX __RKX_A_MAX
 
@@ -81,6 +88,7 @@ enum rkx_event_type
     RKX_EVT_BINDER = 1,
     RKX_EVT_SIGNAL = 2,
     RKX_EVT_NETWORK = 3,
+    RKX_EVT_BLUETOOTH = 4,
 };
 
 // binder type

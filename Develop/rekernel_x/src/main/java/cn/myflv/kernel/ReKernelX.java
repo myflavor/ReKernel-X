@@ -22,6 +22,10 @@ public class ReKernelX {
 
     public static native boolean delMonitorNet(int uid);
 
+    public static native boolean addMonitorBt(int uid);
+
+    public static native boolean delMonitorBt(int uid);
+
     public static native boolean addFreeAsync(String rpcName, int code, int strategy);
 
     public static native boolean delFreeAsync(String rpcName, int code);

@@ -53,6 +53,36 @@ static int rkx_genl_del_monitor_net(struct sk_buff *skb, struct genl_info *info)
     return 0;
 }
 
+static int rkx_genl_monitor_bt(struct sk_buff *skb, struct genl_info *info)
+{
+    uid_t muid;
+
+    if (!info->attrs[RKX_A_UID])
+    {
+        return -EINVAL;
+    }
+
+    muid = (uid_t)nla_get_u32(info->attrs[RKX_A_UID]);
+    rkx_log_debug("addMonitorBt uid=%d\n", muid);
+    rkx_add_bt_uid(muid);
+    return 0;
+}
+
+static int rkx_genl_del_monitor_bt(struct sk_buff *skb, struct genl_info *info)
+{
+    uid_t muid;
+
+    if (!info->attrs[RKX_A_UID])
+    {
+        return -EINVAL;
+    }
+
+    muid = (uid_t)nla_get_u32(info->attrs[RKX_A_UID]);
+    rkx_log_debug("delMonitorBt uid=%d\n", muid);
+    rkx_del_bt_uid(muid);
+    return 0;
+}
+
 static int rkx_genl_add_free_async(struct sk_buff *skb, struct genl_info *info)
 {
     const char *rpc_name;
@@ -114,6 +144,14 @@ static const struct genl_ops rkx_genl_ops[] = {
     {
         .cmd = RKX_C_DEL_MONITOR_NET,
         .doit = rkx_genl_del_monitor_net,
+    },
+    {
+        .cmd = RKX_C_ADD_MONITOR_BT,
+        .doit = rkx_genl_monitor_bt,
+    },
+    {
+        .cmd = RKX_C_DEL_MONITOR_BT,
+        .doit = rkx_genl_del_monitor_bt,
     },
     {
         .cmd = RKX_C_ADD_FREE_ASYNC,
@@ -216,6 +254,19 @@ int rkx_send_message(struct rkx_event *event)
         if (nla_put_s32(skb, RKX_A_NETWORK_PROTO, n->proto) ||
             nla_put_s32(skb, RKX_A_NETWORK_TARGET_UID, n->target_uid) ||
             nla_put_s32(skb, RKX_A_NETWORK_DATA_LEN, n->data_len))
+            goto nla_fail;
+        nla_nest_end(skb, payload);
+        break;
+    }
+    case RKX_EVT_BLUETOOTH:
+    {
+        struct rkx_bluetooth_event *bt = &event->u.bluetooth;
+
+        payload = nla_nest_start(skb, RKX_A_BLUETOOTH);
+        if (!payload)
+            goto nla_fail;
+        if (nla_put_s32(skb, RKX_A_BLUETOOTH_TARGET_UID, bt->target_uid) ||
+            nla_put_s32(skb, RKX_A_BLUETOOTH_DATA_LEN, bt->data_len))
             goto nla_fail;
         nla_nest_end(skb, payload);
         break;

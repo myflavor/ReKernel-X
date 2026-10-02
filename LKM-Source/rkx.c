@@ -19,6 +19,7 @@ static int __init rkx_init(void)
 
 	rkx_init_net_uid();
 	rkx_init_free_async();
+	rkx_init_btsock();
 
 	if (rkx_register_genl() != RKX_SUCCESS)
 	{
@@ -46,6 +47,8 @@ static int __init rkx_init(void)
 		goto err;
 	}
 
+	rkx_register_btsock();
+
 	rkx_register_binder_kp();
 
 	rkx_log_info("hooked!\n");
@@ -53,12 +56,14 @@ static int __init rkx_init(void)
 
 err:
 	rkx_unregister_binder_kp();
+	rkx_unregister_btsock();
 	rkx_unregister_netfilter();
 	rkx_unregister_signal();
 	rkx_unregister_binder();
 	tracepoint_synchronize_unregister();
 	rkx_unregister_genl();
 	rkx_destroy_free_async();
+	rkx_destroy_btsock();
 	rkx_destroy_net_uid();
 	return RKX_ERROR;
 }
@@ -67,12 +72,14 @@ static void __exit rkx_exit(void)
 {
 	rkx_log_info("closing...\n");
 	rkx_unregister_binder_kp();
+	rkx_unregister_btsock();
 	rkx_unregister_netfilter();
 	rkx_unregister_signal();
 	rkx_unregister_binder();
 	tracepoint_synchronize_unregister();
 	rkx_unregister_genl();
 	rkx_destroy_free_async();
+	rkx_destroy_btsock();
 	rkx_destroy_net_uid();
 }
 

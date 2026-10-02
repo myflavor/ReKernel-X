@@ -26,6 +26,7 @@ static jclass g_cbClass = nullptr;
 static jmethodID g_mid_binder = nullptr;
 static jmethodID g_mid_signal = nullptr;
 static jmethodID g_mid_network = nullptr;
+static jmethodID g_mid_bluetooth = nullptr;
 
 static jobject g_callback = nullptr;
 static std::mutex g_callback_mutex;
@@ -57,8 +58,9 @@ JNI_OnLoad(JavaVM *vm, void *reserved) {
     g_mid_binder = env->GetMethodID(g_cbClass, "binder", "(IIIIIILjava/lang/String;I)V");
     g_mid_signal = env->GetMethodID(g_cbClass, "signal", "(IIIII)V");
     g_mid_network = env->GetMethodID(g_cbClass, "network", "(III)V");
+    g_mid_bluetooth = env->GetMethodID(g_cbClass, "bluetooth", "(II)V");
 
-    if (!g_mid_binder || !g_mid_signal || !g_mid_network) {
+    if (!g_mid_binder || !g_mid_signal || !g_mid_network || !g_mid_bluetooth) {
         return JNI_ERR;
     }
 
@@ -245,6 +247,18 @@ static void handle_network_event(JNIEnv *env, jobject cb, struct nlattr *payload
     env->CallVoidMethod(cb, g_mid_network, proto, target_uid, data_len);
 }
 
+static void handle_bluetooth_event(JNIEnv *env, jobject cb, struct nlattr *payload) {
+    struct nlattr *tb[RKX_A_MAX + 1];
+    rkx_nla_parse_nested(tb, RKX_A_MAX, payload);
+
+    int32_t target_uid = -1, data_len = -1;
+
+    if (tb[RKX_A_BLUETOOTH_TARGET_UID]) rkx_nla_get(tb[RKX_A_BLUETOOTH_TARGET_UID], target_uid);
+    if (tb[RKX_A_BLUETOOTH_DATA_LEN]) rkx_nla_get(tb[RKX_A_BLUETOOTH_DATA_LEN], data_len);
+
+    env->CallVoidMethod(cb, g_mid_bluetooth, target_uid, data_len);
+}
+
 static void handle_event(JNIEnv *env, jobject cb, struct nlmsghdr *nlh) {
     if (nlh->nlmsg_type == NLMSG_ERROR || nlh->nlmsg_type == NLMSG_DONE) {
         return;
@@ -286,6 +300,9 @@ static void handle_event(JNIEnv *env, jobject cb, struct nlmsghdr *nlh) {
     }
     if (evt_tb[RKX_A_NETWORK]) {
         handle_network_event(env, cb, evt_tb[RKX_A_NETWORK]);
+    }
+    if (evt_tb[RKX_A_BLUETOOTH]) {
+        handle_bluetooth_event(env, cb, evt_tb[RKX_A_BLUETOOTH]);
     }
 
     if (env->ExceptionCheck()) {
@@ -508,6 +525,58 @@ Java_cn_myflv_kernel_ReKernelX_delMonitorNet(JNIEnv *env, jclass clazz, jint uid
     NlaBuilder b(buf, sizeof(buf));
     b.putGenlHeader(family, g_seq.fetch_add(1),
                     RKX_C_DEL_MONITOR_NET, RKX_GENL_VERSION);
+    b.putU32(RKX_A_UID, static_cast<uint32_t>(uid));
+    size_t len = b.finish();
+
+    struct sockaddr_nl dst = {};
+    dst.nl_family = AF_NETLINK;
+    ssize_t n = sendto(fd, buf, len, 0, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst));
+    close(fd);
+    return (n == static_cast<ssize_t>(len)) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_cn_myflv_kernel_ReKernelX_addMonitorBt(JNIEnv *env, jclass clazz, jint uid) {
+    uint16_t family = g_family_id.load();
+    if (family == 0 || g_fd.load() < 0) {
+        return JNI_FALSE;
+    }
+
+    int fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_GENERIC);
+    if (fd < 0) {
+        return JNI_FALSE;
+    }
+
+    uint8_t buf[128];
+    NlaBuilder b(buf, sizeof(buf));
+    b.putGenlHeader(family, g_seq.fetch_add(1),
+                    RKX_C_ADD_MONITOR_BT, RKX_GENL_VERSION);
+    b.putU32(RKX_A_UID, static_cast<uint32_t>(uid));
+    size_t len = b.finish();
+
+    struct sockaddr_nl dst = {};
+    dst.nl_family = AF_NETLINK;
+    ssize_t n = sendto(fd, buf, len, 0, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst));
+    close(fd);
+    return (n == static_cast<ssize_t>(len)) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_cn_myflv_kernel_ReKernelX_delMonitorBt(JNIEnv *env, jclass clazz, jint uid) {
+    uint16_t family = g_family_id.load();
+    if (family == 0 || g_fd.load() < 0) {
+        return JNI_FALSE;
+    }
+
+    int fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_GENERIC);
+    if (fd < 0) {
+        return JNI_FALSE;
+    }
+
+    uint8_t buf[128];
+    NlaBuilder b(buf, sizeof(buf));
+    b.putGenlHeader(family, g_seq.fetch_add(1),
+                    RKX_C_DEL_MONITOR_BT, RKX_GENL_VERSION);
     b.putU32(RKX_A_UID, static_cast<uint32_t>(uid));
     size_t len = b.finish();
 
